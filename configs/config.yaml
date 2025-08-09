@@ -1,0 +1,62 @@
+# Android Controller Service Configuration
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 1
+  reload: false
+
+adb:
+  device_serial: "127.0.0.1:5555"
+  timeout: 30
+  retry_attempts: 3
+  retry_delay: 1.0
+  connection_timeout: 10
+
+network:
+  static_ip: "192.168.1.100"
+  netmask: "255.255.255.0"
+  gateway: "192.168.1.1"
+  dns_primary: "8.8.8.8"
+  dns_secondary: "8.8.4.4"
+
+screenshot:
+  quality: 80
+  format: "JPEG"
+  max_files: 3
+  storage_path: "data/screenshots"
+  auto_cleanup: true
+
+mqtt:
+  broker_host: "192.168.1.10"
+  broker_port: 1883
+  username: ""
+  password: ""
+  client_id: "android_controller"
+  device_id: "android_controller"
+  base_topic: "homeassistant"
+  qos: 1
+  retain: true
+  keep_alive: 60
+
+monitoring:
+  performance_interval: 5
+  battery_interval: 30
+  network_interval: 10
+  cache_ttl: 60
+
+logging:
+  level: "INFO"
+  format: "structured"
+  file_level: "DEBUG"
+  console_level: "INFO"
+  max_file_size: "50MB"
+  backup_count: 10
+  log_dir: "data/logs"
+
+apps:
+  youtube_tv: "com.google.android.youtube.tv"
+  spotify: "com.spotify.music"
+  netflix: "com.netflix.mediaclient"
+  disney_plus: "com.disney.disneyplus"
+  amazon_prime: "com.amazon.avod.thirdpartyclient"
