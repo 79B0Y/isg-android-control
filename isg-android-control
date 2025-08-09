@@ -1,0 +1,587 @@
+#!/usr/bin/env python3
+"""
+iSG Android Controller Service - Command Line Interface
+提供start、stop、status、uninstall等命令管理服务
+"""
+
+import os
+import sys
+import time
+import signal
+import subprocess
+import argparse
+from pathlib import Path
+import json
+import shutil
+import psutil
+
+
+# 颜色定义
+class Colors:
+    RED = '\033[0;31m'
+    GREEN = '\033[0;32m'
+    YELLOW = '\033[1;33m'
+    BLUE = '\033[0;34m'
+    PURPLE = '\033[0;35m'
+    CYAN = '\033[0;36m'
+    WHITE = '\033[1;37m'
+    NC = '\033[0m'  # No Color
+
+
+def log_info(message):
+    print(f"{Colors.BLUE}[INFO]{Colors.NC} {message}")
+
+
+def log_success(message):
+    print(f"{Colors.GREEN}[SUCCESS]{Colors.NC} {message}")
+
+
+def log_warning(message):
+    print(f"{Colors.YELLOW}[WARNING]{Colors.NC} {message}")
+
+
+def log_error(message):
+    print(f"{Colors.RED}[ERROR]{Colors.NC} {message}")
+
+
+def log_status(message):
+    print(f"{Colors.CYAN}[STATUS]{Colors.NC} {message}")
+
+
+class AndroidController:
+    def __init__(self):
+        self.script_dir = Path(__file__).parent.absolute()
+        self.pid_file = self.script_dir / "data" / "android_controller.pid"
+        self.log_file = self.script_dir / "data" / "logs" / "android_controller.log"
+        self.venv_dir = self.script_dir / "venv"
+        self.config_file = self.script_dir / "configs" / "config.yaml"
+        self.service_name = "iSG Android Controller"
+        
+        # 确保数据目录存在
+        (self.script_dir / "data").mkdir(exist_ok=True)
+        (self.script_dir / "data" / "logs").mkdir(exist_ok=True)
+    
+    def get_service_pid(self):
+        """获取服务进程ID"""
+        # 方法1: 从PID文件读取
+        if self.pid_file.exists():
+            try:
+                with open(self.pid_file, 'r') as f:
+                    pid = int(f.read().strip())
+                # 验证进程是否存在且是我们的服务
+                if psutil.pid_exists(pid):
+                    proc = psutil.Process(pid)
+                    if 'src.main' in ' '.join(proc.cmdline()):
+                        return pid
+            except (ValueError, psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+            
+            # PID文件中的进程不存在，删除PID文件
+            self.pid_file.unlink(missing_ok=True)
+        
+        # 方法2: 查找进程
+        for proc in psutil.process_iter(['pid', 'cmdline']):
+            try:
+                cmdline = ' '.join(proc.info['cmdline'] or [])
+                if 'src.main' in cmdline and str(self.script_dir) in cmdline:
+                    return proc.info['pid']
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        
+        return None
+    
+    def is_service_running(self):
+        """检查服务是否运行"""
+        return self.get_service_pid() is not None
+    
+    def get_service_status(self):
+        """获取详细服务状态"""
+        pid = self.get_service_pid()
+        if not pid:
+            return {
+                'running': False,
+                'pid': None,
+                'status': 'stopped',
+                'uptime': None,
+                'memory': None,
+                'cpu': None
+            }
+        
+        try:
+            proc = psutil.Process(pid)
+            
+            # 计算运行时间
+            create_time = proc.create_time()
+            uptime_seconds = time.time() - create_time
+            
+            # 格式化运行时间
+            days = int(uptime_seconds // 86400)
+            hours = int((uptime_seconds % 86400) // 3600)
+            minutes = int((uptime_seconds % 3600) // 60)
+            
+            if days > 0:
+                uptime_str = f"{days}d {hours}h {minutes}m"
+            elif hours > 0:
+                uptime_str = f"{hours}h {minutes}m"
+            else:
+                uptime_str = f"{minutes}m"
+            
+            return {
+                'running': True,
+                'pid': pid,
+                'status': 'running',
+                'uptime': uptime_str,
+                'uptime_seconds': int(uptime_seconds),
+                'memory': f"{proc.memory_info().rss / 1024 / 1024:.1f}MB",
+                'cpu': f"{proc.cpu_percent():.1f}%",
+                'create_time': create_time
+            }
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            return {
+                'running': False,
+                'pid': None,
+                'status': 'stopped',
+                'uptime': None,
+                'memory': None,
+                'cpu': None
+            }
+    
+    def check_environment(self):
+        """检查运行环境"""
+        issues = []
+        
+        # 检查虚拟环境
+        if not self.venv_dir.exists():
+            issues.append("Python虚拟环境不存在")
+        
+        # 检查配置文件
+        if not self.config_file.exists():
+            issues.append("配置文件不存在")
+        
+        # 检查ADB
+        try:
+            subprocess.run(['adb', '--version'], capture_output=True, check=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            issues.append("ADB未安装或不在PATH中")
+        
+        # 检查Python依赖
+        if self.venv_dir.exists():
+            python_path = self.venv_dir / "bin" / "python3"
+            if python_path.exists():
+                try:
+                    result = subprocess.run([
+                        str(python_path), '-c', 
+                        'import fastapi, uvicorn, pydantic, paho.mqtt.client'
+                    ], capture_output=True)
+                    if result.returncode != 0:
+                        issues.append("Python依赖包缺失或损坏")
+                except Exception:
+                    issues.append("无法验证Python依赖")
+        
+        return issues
+    
+    def start_service(self, detach=True):
+        """启动服务"""
+        print(f"🚀 启动{self.service_name}...")
+        
+        # 检查是否已在运行
+        if self.is_service_running():
+            pid = self.get_service_pid()
+            log_warning(f"服务已在运行 (PID: {pid})")
+            return True
+        
+        # 检查环境
+        issues = self.check_environment()
+        if issues:
+            log_error("环境检查失败:")
+            for issue in issues:
+                print(f"  • {issue}")
+            log_info("请运行安装脚本修复环境问题:")
+            print("  ./install.sh  (Termux)")
+            print("  ./install-mac.sh  (macOS)")
+            return False
+        
+        # 检查ADB连接
+        try:
+            result = subprocess.run(['adb', 'devices'], capture_output=True, text=True)
+            if 'device' not in result.stdout:
+                log_warning("未检测到ADB设备连接")
+                print("提示: 使用以下命令连接设备:")
+                print("  adb connect <设备IP>:5555")
+                print("  ./connect.sh <设备IP>:5555  (Termux)")
+                print("  ./connect-mac.sh <设备IP>:5555  (macOS)")
+        except Exception:
+            log_warning("无法检查ADB连接状态")
+        
+        # 构建启动命令
+        python_path = self.venv_dir / "bin" / "python3"
+        
+        cmd = [
+            str(python_path),
+            '-m', 'src.main',
+            '--config', str(self.config_file)
+        ]
+        
+        # 设置环境变量
+        env = os.environ.copy()
+        env['PYTHONPATH'] = str(self.script_dir)
+        
+        if detach:
+            # 后台启动
+            log_info("以后台模式启动服务...")
+            
+            # 重定向输出到日志文件
+            log_file_path = self.script_dir / "data" / "logs" / "service.log"
+            
+            with open(log_file_path, 'a') as log_file:
+                process = subprocess.Popen(
+                    cmd,
+                    cwd=self.script_dir,
+                    env=env,
+                    stdout=log_file,
+                    stderr=log_file,
+                    start_new_session=True
+                )
+            
+            # 保存PID
+            with open(self.pid_file, 'w') as f:
+                f.write(str(process.pid))
+            
+            # 等待一下确认启动成功
+            time.sleep(2)
+            
+            if self.is_service_running():
+                log_success(f"服务启动成功 (PID: {process.pid})")
+                print(f"📡 API文档: http://localhost:8000/docs")
+                print(f"📋 服务状态: isg-android-control status")
+                print(f"📝 日志文件: {log_file_path}")
+                return True
+            else:
+                log_error("服务启动失败")
+                print(f"查看日志: tail -f {log_file_path}")
+                return False
+        else:
+            # 前台启动
+            log_info("以前台模式启动服务...")
+            print("按 Ctrl+C 停止服务")
+            print("=" * 50)
+            
+            try:
+                subprocess.run(cmd, cwd=self.script_dir, env=env)
+                return True
+            except KeyboardInterrupt:
+                log_info("收到中断信号，服务已停止")
+                return True
+            except Exception as e:
+                log_error(f"服务启动失败: {e}")
+                return False
+    
+    def stop_service(self):
+        """停止服务"""
+        print(f"🛑 停止{self.service_name}...")
+        
+        pid = self.get_service_pid()
+        if not pid:
+            log_info("服务未运行")
+            return True
+        
+        try:
+            # 发送TERM信号
+            log_info(f"正在停止服务 (PID: {pid})")
+            os.kill(pid, signal.SIGTERM)
+            
+            # 等待进程结束
+            max_wait = 10  # 最多等待10秒
+            for _ in range(max_wait):
+                if not self.is_service_running():
+                    break
+                time.sleep(1)
+            
+            # 检查是否还在运行
+            if self.is_service_running():
+                log_warning("正常停止失败，强制终止...")
+                os.kill(pid, signal.SIGKILL)
+                time.sleep(2)
+            
+            if not self.is_service_running():
+                log_success("服务已停止")
+                # 清理PID文件
+                self.pid_file.unlink(missing_ok=True)
+                return True
+            else:
+                log_error("无法停止服务")
+                return False
+                
+        except ProcessLookupError:
+            log_info("服务进程已不存在")
+            self.pid_file.unlink(missing_ok=True)
+            return True
+        except PermissionError:
+            log_error("权限不足，无法停止服务")
+            return False
+        except Exception as e:
+            log_error(f"停止服务时出错: {e}")
+            return False
+    
+    def show_status(self, detailed=False):
+        """显示服务状态"""
+        print(f"📊 {self.service_name} 状态")
+        print("=" * 50)
+        
+        status = self.get_service_status()
+        
+        if status['running']:
+            log_status(f"状态: {Colors.GREEN}运行中{Colors.NC}")
+            print(f"进程ID: {status['pid']}")
+            print(f"运行时间: {status['uptime']}")
+            print(f"内存使用: {status['memory']}")
+            print(f"CPU使用: {status['cpu']}")
+            
+            # 检查API健康状态
+            try:
+                import urllib.request
+                response = urllib.request.urlopen('http://localhost:8000/health', timeout=5)
+                if response.status == 200:
+                    log_status(f"API状态: {Colors.GREEN}健康{Colors.NC}")
+                    print("API文档: http://localhost:8000/docs")
+                else:
+                    log_status(f"API状态: {Colors.YELLOW}异常{Colors.NC}")
+            except Exception:
+                log_status(f"API状态: {Colors.RED}无法访问{Colors.NC}")
+        else:
+            log_status(f"状态: {Colors.RED}已停止{Colors.NC}")
+        
+        if detailed:
+            print("\n" + "=" * 30)
+            print("详细信息:")
+            
+            # 环境检查
+            print(f"\n📂 环境检查:")
+            issues = self.check_environment()
+            if not issues:
+                log_success("环境正常")
+            else:
+                for issue in issues:
+                    log_warning(issue)
+            
+            # ADB设备状态
+            print(f"\n📱 ADB设备:")
+            try:
+                result = subprocess.run(['adb', 'devices'], capture_output=True, text=True)
+                devices = [line for line in result.stdout.split('\n') 
+                          if line.strip() and 'List of devices' not in line]
+                
+                if devices:
+                    for device in devices:
+                        if device.strip():
+                            print(f"  • {device.strip()}")
+                else:
+                    log_warning("未连接设备")
+            except Exception as e:
+                log_error(f"无法检查ADB设备: {e}")
+            
+            # 日志文件状态
+            print(f"\n📝 日志文件:")
+            if self.log_file.exists():
+                stat = self.log_file.stat()
+                size_mb = stat.st_size / 1024 / 1024
+                mod_time = time.strftime('%Y-%m-%d %H:%M:%S', 
+                                        time.localtime(stat.st_mtime))
+                print(f"  • 大小: {size_mb:.1f} MB")
+                print(f"  • 修改时间: {mod_time}")
+                print(f"  • 路径: {self.log_file}")
+            else:
+                log_warning("日志文件不存在")
+        
+        print()
+        return status['running']
+    
+    def restart_service(self):
+        """重启服务"""
+        print(f"🔄 重启{self.service_name}...")
+        
+        # 先停止
+        if self.is_service_running():
+            if not self.stop_service():
+                return False
+            time.sleep(1)
+        
+        # 再启动
+        return self.start_service()
+    
+    def uninstall_service(self, force=False):
+        """卸载服务"""
+        print(f"🗑️  卸载{self.service_name}...")
+        
+        if not force:
+            response = input(f"确定要卸载 {self.service_name} 吗? [y/N]: ")
+            if response.lower() not in ['y', 'yes']:
+                log_info("取消卸载")
+                return False
+        
+        # 停止服务
+        if self.is_service_running():
+            log_info("正在停止运行中的服务...")
+            self.stop_service()
+        
+        items_to_remove = []
+        items_removed = []
+        
+        # 虚拟环境
+        if self.venv_dir.exists():
+            items_to_remove.append(("Python虚拟环境", self.venv_dir))
+        
+        # 数据目录（可选）
+        data_dir = self.script_dir / "data"
+        if data_dir.exists():
+            keep_data = True
+            if not force:
+                response = input("是否保留数据目录（日志、截图）? [Y/n]: ")
+                if response.lower() in ['n', 'no']:
+                    keep_data = False
+            
+            if not keep_data:
+                items_to_remove.append(("数据目录", data_dir))
+        
+        # 配置文件（可选）
+        if not force:
+            response = input("是否保留配置文件? [Y/n]: ")
+            if response.lower() in ['n', 'no']:
+                config_dir = self.script_dir / "configs"
+                if config_dir.exists():
+                    items_to_remove.append(("配置目录", config_dir))
+                
+                env_file = self.script_dir / ".env"
+                if env_file.exists():
+                    items_to_remove.append(("环境配置", env_file))
+        
+        # 执行删除
+        for name, path in items_to_remove:
+            try:
+                if path.is_file():
+                    path.unlink()
+                    log_success(f"删除{name}: {path}")
+                    items_removed.append(name)
+                elif path.is_dir():
+                    shutil.rmtree(path)
+                    log_success(f"删除{name}: {path}")
+                    items_removed.append(name)
+            except Exception as e:
+                log_error(f"删除{name}失败: {e}")
+        
+        # macOS特定清理
+        mac_scripts = [
+            self.script_dir / "start-mac.sh",
+            self.script_dir / "stop-mac.sh", 
+            self.script_dir / "connect-mac.sh"
+        ]
+        
+        for script in mac_scripts:
+            if script.exists():
+                try:
+                    script.unlink()
+                    items_removed.append(f"脚本文件 {script.name}")
+                except Exception as e:
+                    log_warning(f"删除{script.name}失败: {e}")
+        
+        # 显示清理结果
+        if items_removed:
+            log_success("以下项目已删除:")
+            for item in items_removed:
+                print(f"  ✓ {item}")
+        
+        # 系统服务清理提示
+        if sys.platform == "darwin":  # macOS
+            print(f"\n{Colors.YELLOW}macOS系统清理建议:{Colors.NC}")
+            print("如需完全清理Homebrew安装的依赖:")
+            print("  brew uninstall android-platform-tools redis")
+            print("  brew cleanup")
+        
+        print(f"\n{Colors.GREEN}卸载完成!{Colors.NC}")
+        print("如需重新安装，请运行:")
+        print("  ./install.sh  (Termux)")
+        print("  ./install-mac.sh  (macOS)")
+        
+        return True
+
+
+def main():
+    """主函数"""
+    parser = argparse.ArgumentParser(
+        description='iSG Android Controller Service CLI',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+示例:
+  isg-android-control start           # 启动服务（后台）
+  isg-android-control start -f        # 启动服务（前台）
+  isg-android-control stop            # 停止服务
+  isg-android-control status          # 查看状态
+  isg-android-control status -d       # 详细状态
+  isg-android-control restart         # 重启服务
+  isg-android-control uninstall       # 卸载服务
+  isg-android-control uninstall -f    # 强制卸载
+        """
+    )
+    
+    subparsers = parser.add_subparsers(dest='command', help='可用命令')
+    
+    # start命令
+    start_parser = subparsers.add_parser('start', help='启动服务')
+    start_parser.add_argument('-f', '--foreground', action='store_true',
+                             help='前台运行（不分离进程）')
+    
+    # stop命令
+    subparsers.add_parser('stop', help='停止服务')
+    
+    # status命令
+    status_parser = subparsers.add_parser('status', help='查看服务状态')
+    status_parser.add_argument('-d', '--detailed', action='store_true',
+                              help='显示详细信息')
+    
+    # restart命令
+    subparsers.add_parser('restart', help='重启服务')
+    
+    # uninstall命令
+    uninstall_parser = subparsers.add_parser('uninstall', help='卸载服务')
+    uninstall_parser.add_argument('-f', '--force', action='store_true',
+                                 help='强制卸载（不询问确认）')
+    
+    args = parser.parse_args()
+    
+    if not args.command:
+        parser.print_help()
+        return
+    
+    controller = AndroidController()
+    
+    try:
+        if args.command == 'start':
+            success = controller.start_service(detach=not args.foreground)
+            sys.exit(0 if success else 1)
+            
+        elif args.command == 'stop':
+            success = controller.stop_service()
+            sys.exit(0 if success else 1)
+            
+        elif args.command == 'status':
+            running = controller.show_status(detailed=args.detailed)
+            sys.exit(0 if running else 3)  # 3表示服务未运行
+            
+        elif args.command == 'restart':
+            success = controller.restart_service()
+            sys.exit(0 if success else 1)
+            
+        elif args.command == 'uninstall':
+            success = controller.uninstall_service(force=args.force)
+            sys.exit(0 if success else 1)
+            
+    except KeyboardInterrupt:
+        log_info("操作被用户中断")
+        sys.exit(130)
+    except Exception as e:
+        log_error(f"执行命令时出错: {e}")
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()

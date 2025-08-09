@@ -44,22 +44,71 @@
 
 ### 环境要求
 
+#### Termux Ubuntu 环境
 - **操作系统**: Termux + Ubuntu (proot)
 - **Python**: >= 3.9
 - **ADB**: Android SDK Platform Tools
 - **设备**: 支持ADB调试的Android设备
 
+#### macOS 环境
+- **操作系统**: macOS 10.15+ (Catalina及以上)
+- **Python**: >= 3.9 (通过Homebrew安装)
+- **Homebrew**: macOS包管理器
+- **Xcode Command Line Tools**: 编译工具
+- **设备**: Android设备或模拟器
+
 ### 一键安装
 
+#### Termux Ubuntu 环境
 ```bash
-# 克隆项目
+# 1. 克隆项目
 git clone <repository-url>
 cd isg-android-control
 
-# 运行安装脚本
-chmod +x scripts/install.sh
-./scripts/install.sh
+# 2. 一键安装
+./install.sh
+
+# 3. 连接Android设备
+./connect.sh 192.168.1.100:5555
+
+# 4. 启动服务
+isg-android-control start
 ```
+
+#### macOS 环境
+```bash
+# 1. 克隆项目
+git clone <repository-url>
+cd isg-android-control
+
+# 2. macOS一键安装
+./install-mac.sh
+
+# 3. 连接Android设备或模拟器
+./connect-mac.sh 192.168.1.100:5555  # 真实设备
+./connect-mac.sh                      # 本地模拟器
+
+# 4. 启动服务
+isg-android-control start
+```
+
+**Termux安装脚本会自动：**
+- 检查Python 3.9+环境
+- 安装系统依赖 (ADB、Redis等)
+- 创建虚拟环境
+- 安装Python依赖包
+- 创建必要目录和配置文件
+- 设置管理脚本
+
+**macOS安装脚本会自动：**
+- 检查并安装Xcode Command Line Tools
+- 安装Homebrew (如果未安装)
+- 安装Python 3.11、ADB、Redis等
+- 启动Redis服务
+- 创建虚拟环境和安装依赖
+- 生成macOS专用管理脚本
+
+> 📖 **macOS用户**: 查看详细的 [macOS使用指南](README-MAC.md) 获取完整的安装、配置和使用说明
 
 ### 手动安装
 
@@ -334,19 +383,32 @@ entities:
 
 ## 🔧 常用命令
 
-### 服务管理
+### 统一CLI命令 (推荐)
 ```bash
-# 启动服务
-./start.sh
+# 服务管理
+isg-android-control start            # 启动服务
+isg-android-control stop             # 停止服务
+isg-android-control restart          # 重启服务
+isg-android-control status           # 查看状态
+isg-android-control status -d        # 详细状态信息
+isg-android-control uninstall        # 卸载服务
 
-# 停止服务
-./stop.sh
+# 设备连接
+./connect.sh 192.168.1.100:5555      # Termux环境
+./connect-mac.sh 192.168.1.100:5555  # macOS环境
+```
 
-# 重启服务
-./stop.sh && ./start.sh
+### 传统脚本方式
+```bash
+# Termux Ubuntu
+./start.sh                           # 启动
+./stop.sh                            # 停止
+./scripts/monitor.sh                 # 监控
 
-# 查看服务状态
-ps aux | grep "src.main"
+# macOS
+./start-mac.sh                       # 启动
+./stop-mac.sh                        # 停止
+brew services start redis            # Redis管理
 ```
 
 ### 日志查看

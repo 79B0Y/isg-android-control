@@ -257,6 +257,39 @@ EOF
     fi
 }
 
+# 设置命令行工具
+setup_cli_command() {
+    log_info "设置命令行工具..."
+    
+    # 尝试创建软链接到PATH中的目录
+    local possible_dirs=("/data/data/com.termux/files/usr/bin" "/usr/local/bin" "$HOME/bin" "$PREFIX/bin")
+    local source_script="$(pwd)/isg-android-control"
+    local installed=false
+    
+    for target_dir in "${possible_dirs[@]}"; do
+        if [[ -d "$target_dir" ]] && [[ -w "$target_dir" ]]; then
+            local target_link="$target_dir/isg-android-control"
+            
+            # 删除旧链接
+            [[ -L "$target_link" ]] && rm "$target_link"
+            
+            # 创建新链接
+            if ln -s "$source_script" "$target_link" 2>/dev/null; then
+                log_success "命令行工具已安装: isg-android-control"
+                installed=true
+                break
+            fi
+        fi
+    done
+    
+    if [[ "$installed" != true ]]; then
+        log_warning "无法自动安装命令行工具"
+        log_info "您可以手动添加到PATH中:"
+        echo "  echo 'export PATH=\"$(pwd):\$PATH\"' >> ~/.bashrc"
+        echo "  source ~/.bashrc"
+    fi
+}
+
 # 创建启动脚本
 create_scripts() {
     log_info "创建管理脚本..."
@@ -356,11 +389,18 @@ show_completion_info() {
     log_info "🚀 快速开始:"
     echo "1. 连接ADB设备:"
     echo "   adb connect <设备IP>:5555"
+    echo "   ./connect.sh <设备IP>:5555  # 或使用连接脚本"
     echo ""
     echo "2. 启动服务:"
-    echo "   ./start.sh"
+    echo "   isg-android-control start   # 使用CLI命令"
+    echo "   ./start.sh                  # 或使用脚本"
     echo ""
-    echo "3. 访问API文档:"
+    echo "3. 管理服务:"
+    echo "   isg-android-control status  # 查看状态"
+    echo "   isg-android-control stop    # 停止服务"
+    echo "   isg-android-control restart # 重启服务"
+    echo ""
+    echo "4. 访问API文档:"
     echo "   http://localhost:8000/docs"
     echo ""
     
@@ -415,6 +455,7 @@ main() {
     # 设置项目
     setup_directories
     setup_config
+    setup_cli_command
     create_scripts
     
     # 运行测试
