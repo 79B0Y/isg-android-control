@@ -153,6 +153,8 @@ async def get_current_app():
         adb = get_adb_controller()
         current_activity = await adb.get_current_activity()
         
+        logger.info(f"DEBUG: get_current_activity returned: {current_activity}")
+        
         if current_activity:
             package_name = current_activity.split('/')[0] if '/' in current_activity else current_activity
             activity_name = current_activity.split('/')[1] if '/' in current_activity else ""
@@ -169,7 +171,7 @@ async def get_current_app():
         else:
             return BaseResponse(
                 status=ResponseStatus.WARNING,
-                message="No current app found",
+                message=f"No current app found (returned: {current_activity})",
                 data=None
             )
             

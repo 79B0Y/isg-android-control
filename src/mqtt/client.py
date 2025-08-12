@@ -26,17 +26,35 @@ class MQTTClient:
         self.is_connected = False
         self.message_handlers: Dict[str, Callable] = {}
         self.reconnect_task: Optional[asyncio.Task] = None
+        self.event_loop: Optional[asyncio.AbstractEventLoop] = None
         
         logger.info(f"MQTT Client initialized, broker: {self.mqtt_config.broker_host}:{self.mqtt_config.broker_port}")
     
     async def connect(self) -> bool:
         """连接到MQTT broker"""
         try:
-            # 创建MQTT客户端
+            # 保存当前事件循环
+            self.event_loop = asyncio.get_event_loop()
+            
+            # 创建MQTT客户端 - 使用更稳定的配置
             self.client = mqtt.Client(
                 client_id=self.mqtt_config.client_id,
-                clean_session=True
+                clean_session=False  # 使用持久会话，避免重连问题
             )
+            
+            # 设置更保守的连接选项
+            self.client.reconnect_delay_set(min_delay=5, max_delay=60)
+            
+            # 设置更宽松的超时设置
+            self.client.socket_timeout = 60
+            self.client.socket_keepalive = 60
+            
+            # 添加消息大小限制
+            self.client.max_inflight_messages_set(20)
+            self.client.max_queued_messages_set(0)  # 无限队列
+            
+            # 禁用Will消息和其他可能导致断开的特性
+            self.client.will_clear()
             
             # 设置用户名和密码
             if self.mqtt_config.username and self.mqtt_config.password:
@@ -52,31 +70,38 @@ class MQTTClient:
             self.client.on_subscribe = self._on_subscribe
             self.client.on_publish = self._on_publish
             
-            # 连接到broker
+            # 连接到broker - 使用同步连接而非异步
             logger.info(f"Connecting to MQTT broker: {self.mqtt_config.broker_host}:{self.mqtt_config.broker_port}")
             
-            self.client.connect_async(
+            # 使用同步连接，更稳定
+            result = self.client.connect(
                 self.mqtt_config.broker_host,
                 self.mqtt_config.broker_port,
                 self.mqtt_config.keep_alive
             )
             
+            if result != mqtt.MQTT_ERR_SUCCESS:
+                logger.error(f"MQTT connection failed with result code: {result}")
+                return False
+            
             # 启动网络循环
             self.client.loop_start()
             
             # 等待连接建立
-            for _ in range(10):  # 最多等待10秒
+            for _ in range(20):  # 最多等待20秒
                 if self.is_connected:
                     break
                 await asyncio.sleep(1)
             
             if self.is_connected:
                 logger.info("MQTT client connected successfully")
-                # 启动重连任务
-                self.reconnect_task = asyncio.create_task(self._reconnect_loop())
                 return True
             else:
                 logger.error("MQTT client connection timeout")
+                # 清理失败的连接
+                if self.client:
+                    self.client.loop_stop()
+                    self.client.disconnect()
                 return False
                 
         except Exception as e:
@@ -123,16 +148,20 @@ class MQTTClient:
             payload = msg.payload.decode('utf-8')
             
             log_mqtt_message(topic, payload, "in")
+            logger.info(f"MQTT: Received message on topic: {topic}, payload: {payload}")
             
             # 查找匹配的处理器
             handler = self.message_handlers.get(topic)
             if handler:
-                asyncio.create_task(handler(topic, payload))
+                logger.info(f"MQTT: Found handler for topic: {topic}")
+                self._schedule_handler(handler, topic, payload)
             else:
-                # 检查通配符匹配
-                for pattern, handler in self.message_handlers.items():
+                logger.warning(f"MQTT: No handler found for topic: {topic}")
+                # 检查是否有模式匹配的处理器
+                for pattern, pattern_handler in self.message_handlers.items():
                     if self._topic_matches(pattern, topic):
-                        asyncio.create_task(handler(topic, payload))
+                        logger.info(f"MQTT: Found pattern handler for topic: {topic} -> {pattern}")
+                        self._schedule_handler(pattern_handler, topic, payload)
                         break
                 
         except Exception as e:
@@ -173,23 +202,9 @@ class MQTTClient:
         return i == len(pattern_parts) and j == len(topic_parts)
     
     async def _reconnect_loop(self):
-        """重连循环任务"""
-        while True:
-            try:
-                await asyncio.sleep(30)  # 每30秒检查一次
-                
-                if not self.is_connected and self.client:
-                    logger.info("Attempting to reconnect to MQTT broker")
-                    try:
-                        self.client.reconnect()
-                    except Exception as e:
-                        logger.warning(f"MQTT reconnection attempt failed: {e}")
-                        
-            except asyncio.CancelledError:
-                logger.info("MQTT reconnect loop cancelled")
-                break
-            except Exception as e:
-                logger.error(f"MQTT reconnect loop error: {e}")
+        """重连循环任务 - 禁用自动重连，让paho-mqtt自己处理"""
+        # 移除重连逻辑，依赖paho-mqtt内置重连
+        pass
     
     async def publish(self, topic: str, payload: Any, qos: int = None, retain: bool = None) -> bool:
         """发布消息"""
@@ -284,6 +299,17 @@ class MQTTClient:
             "subscribed_topics": list(self.message_handlers.keys()),
             "timestamp": datetime.now().isoformat()
         }
+    
+    def _schedule_handler(self, handler: Callable, topic: str, payload: str):
+        """线程安全地调度异步处理器"""
+        try:
+            if self.event_loop and not self.event_loop.is_closed():
+                # 使用保存的事件循环调度任务
+                asyncio.run_coroutine_threadsafe(handler(topic, payload), self.event_loop)
+            else:
+                logger.error("Cannot schedule handler: event loop not available")
+        except Exception as e:
+            logger.error(f"Failed to schedule MQTT handler: {e}")
 
 
 # 全局MQTT客户端实例

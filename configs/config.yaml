@@ -7,16 +7,16 @@ server:
   reload: false
 
 adb:
-  device_serial: "127.0.0.1:5555"
+  device_serial: "192.168.3.60:5555"
   timeout: 30
   retry_attempts: 3
   retry_delay: 1.0
   connection_timeout: 10
 
 network:
-  static_ip: "192.168.1.100"
+  static_ip: "192.168.3.74"
   netmask: "255.255.255.0"
-  gateway: "192.168.1.1"
+  gateway: "192.168.3.1"
   dns_primary: "8.8.8.8"
   dns_secondary: "8.8.4.4"
 
@@ -28,10 +28,10 @@ screenshot:
   auto_cleanup: true
 
 mqtt:
-  broker_host: "192.168.1.10"
+  broker_host: "192.168.3.60"
   broker_port: 1883
-  username: ""
-  password: ""
+  username: "admin"
+  password: "admin"
   client_id: "android_controller"
   device_id: "android_controller"
   base_topic: "homeassistant"

@@ -18,6 +18,8 @@ from loguru import logger
 from src.core.config import get_settings
 from src.core.logger import setup_logging
 from src.api.main import create_app
+from src.mqtt.client import MQTTClient
+from src.mqtt.homeassistant import HomeAssistantMQTT
 
 
 @asynccontextmanager
@@ -28,8 +30,38 @@ async def lifespan(app: FastAPI):
     
     # 启动时初始化
     try:
-        # 这里可以添加启动时的初始化逻辑
-        # 比如检查ADB连接、初始化MQTT等
+        # 清除配置缓存并重新加载
+        get_settings.cache_clear()
+        settings = get_settings()
+        
+        # 手动设置正确的配置
+        settings.mqtt.broker_host = "192.168.3.60"
+        settings.mqtt.username = "admin"  
+        settings.mqtt.password = "admin"
+        settings.mqtt.keep_alive = 60  # 使用较长的keep alive
+        settings.mqtt.qos = 0  # QoS 0更稳定
+        settings.mqtt.retain = False
+        # 使用固定客户端ID避免冲突
+        settings.mqtt.client_id = f"android_ctrl_stable"
+        settings.adb.device_serial = "192.168.3.60:5555"
+        
+        # 初始化MQTT客户端和Home Assistant集成
+        mqtt_client = MQTTClient()
+        ha_integration = HomeAssistantMQTT()
+        
+        # 重新启用MQTT进行调试
+        logger.info("Re-enabling MQTT for debugging")
+        await mqtt_client.connect()
+        await ha_integration.setup()
+        
+        # 添加通配符订阅来捕获所有消息
+        async def debug_handler(topic: str, payload: str):
+            logger.warning(f"🔍 DEBUG: Received MQTT message - Topic: {topic}, Payload: {payload}")
+        
+        await mqtt_client.subscribe("homeassistant/#", debug_handler)
+        await mqtt_client.subscribe("#", debug_handler)  # 捕获所有主题
+        
+        logger.info("MQTT and Home Assistant integration initialized")
         yield
     finally:
         # 清理资源
@@ -60,7 +92,8 @@ def main(config: str, host: str, port: int, reload: bool, debug: bool):
         sys.exit(1)
     
     # 获取设置
-    settings = get_settings(config_file=config)
+    # 优先从.env加载配置，YAML作为默认值
+    settings = get_settings()
     
     # 覆盖命令行参数
     if host:
@@ -70,7 +103,7 @@ def main(config: str, host: str, port: int, reload: bool, debug: bool):
     if reload:
         settings.server.reload = reload
     
-    logger.info(f"Configuration loaded from: {config}")
+    logger.info(f"Configuration loaded from .env and {config}")
     logger.info(f"Server will start on {settings.server.host}:{settings.server.port}")
     
     # 创建必要的目录

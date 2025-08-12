@@ -4,7 +4,7 @@ Home Assistant MQTT自动发现集成
 
 import asyncio
 import json
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 from loguru import logger

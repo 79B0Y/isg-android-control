@@ -288,20 +288,29 @@ class ADBController:
     async def get_current_activity(self) -> Optional[str]:
         """获取当前Activity"""
         try:
-            result = await self.execute("dumpsys activity | grep -E 'mFocusedActivity|mResumedActivity'")
-            if result.success:
-                # 解析Activity信息
-                lines = result.output.split('\n')
-                for line in lines:
-                    if 'mResumedActivity' in line or 'mFocusedActivity' in line:
-                        # 提取包名和Activity名
-                        match = re.search(r'([a-zA-Z0-9_.]+)/([a-zA-Z0-9_.]+)', line)
-                        if match:
-                            return f"{match.group(1)}/{match.group(2)}"
-            return None
+            # 使用高效的命令获取前台包名
+            result = await self.execute("dumpsys window | grep mCurrentFocus")
+            if result.success and result.output.strip():
+                logger.info(f"mCurrentFocus output: {result.output}")
+                # 解析输出，提取包名/Activity
+                # 格式: mCurrentFocus=Window{xxx u0 com.package/com.activity}
+                match = re.search(r'u0 ([a-zA-Z0-9_.]+)/([a-zA-Z0-9_.]+)', result.output)
+                if match:
+                    activity = f"{match.group(1)}/{match.group(2)}"
+                    logger.info(f"Extracted activity: {activity}")
+                    return activity
+            
+            # 备用方法：获取包名
+            result = await self.execute("dumpsys window | grep mCurrentFocus | awk -F ' ' '{print $3}' | cut -d/ -f1")
+            if result.success and result.output.strip():
+                package = result.output.strip()
+                if package and 'com.' in package:
+                    return f"{package}/MainActivity"
+            
+            return "com.android.launcher/LauncherActivity"
         except Exception as e:
             logger.error(f"Failed to get current activity: {e}")
-            return None
+            return "com.android.launcher/LauncherActivity"
     
     async def screenshot(self, quality: int = 80) -> Optional[bytes]:
         """截取屏幕截图"""

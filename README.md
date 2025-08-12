@@ -488,13 +488,13 @@ curl -X DELETE http://localhost:8000/api/v1/screenshot/
    nc -zv 192.168.1.10 1883
    
    # 检查认证信息
-   mosquitto_sub -h 192.168.1.10 -t test
+   mosquitto_sub -h 192.168.1.10 -p 1883 -t test
    ```
 
 2. **Home Assistant发现问题**
    ```bash
    # 检查发现主题
-   mosquitto_sub -h 192.168.1.10 -t "homeassistant/+/+/config"
+   mosquitto_sub -h 192.168.1.10 -p 1883 -t "homeassistant/+/+/config" -v
    
    # 手动触发发现
    curl -X POST http://localhost:8000/api/v1/system/status

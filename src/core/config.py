@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 
 import yaml
-from pydantic import BaseSettings, Field
-from pydantic_settings import BaseSettings as PydanticBaseSettings
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 
 class ServerConfig(BaseSettings):
@@ -19,6 +19,8 @@ class ServerConfig(BaseSettings):
     port: int = Field(default=8000, env="SERVER_PORT")
     workers: int = Field(default=1, env="SERVER_WORKERS")
     reload: bool = Field(default=False, env="SERVER_RELOAD")
+    
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "allow"}
 
 
 class ADBConfig(BaseSettings):
@@ -28,6 +30,8 @@ class ADBConfig(BaseSettings):
     retry_attempts: int = Field(default=3, env="ADB_RETRY_ATTEMPTS")
     retry_delay: float = Field(default=1.0, env="ADB_RETRY_DELAY")
     connection_timeout: int = Field(default=10, env="ADB_CONNECTION_TIMEOUT")
+    
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "allow"}
 
 
 class NetworkConfig(BaseSettings):
@@ -60,6 +64,8 @@ class MQTTConfig(BaseSettings):
     qos: int = Field(default=1, env="MQTT_QOS")
     retain: bool = Field(default=True, env="MQTT_RETAIN")
     keep_alive: int = Field(default=60, env="MQTT_KEEP_ALIVE")
+    
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "allow"}
 
 
 class MonitoringConfig(BaseSettings):
@@ -81,7 +87,7 @@ class LoggingConfig(BaseSettings):
     log_dir: str = Field(default="data/logs", env="LOG_DIR")
 
 
-class Settings(PydanticBaseSettings):
+class Settings(BaseSettings):
     """主配置类"""
     server: ServerConfig = Field(default_factory=ServerConfig)
     adb: ADBConfig = Field(default_factory=ADBConfig)
@@ -92,10 +98,12 @@ class Settings(PydanticBaseSettings):
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     apps: Dict[str, str] = Field(default_factory=dict)
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "case_sensitive": False,
+        "extra": "allow"
+    }
 
     @classmethod
     def load_from_yaml(cls, config_file: str) -> "Settings":
