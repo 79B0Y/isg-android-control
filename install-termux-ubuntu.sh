@@ -71,37 +71,49 @@ show_progress() {
 check_proot_environment() {
     log_step "检查 proot Ubuntu 环境..."
     
-    # 检查是否在proot中
-    if [[ ! -f "/proc/version" ]]; then
-        log_error "无法访问 /proc/version，可能不在正确的环境中"
-        return 1
+    # 检查是否在proot中（更宽松的检测）
+    if [[ -f "/proc/version" ]]; then
+        log_success "✓ 可以访问 /proc/version"
+    else
+        log_warning "⚠ 无法访问 /proc/version（某些proot环境正常）"
     fi
     
     # 检查是否在Ubuntu中
     if [[ -f "/etc/os-release" ]]; then
         . /etc/os-release
-        if [[ "$ID" != "ubuntu" ]]; then
-            log_error "当前环境不是Ubuntu，检测到: $ID"
-            log_info "此脚本专用于 Termux proot Ubuntu 环境"
-            return 1
+        if [[ "$ID" == "ubuntu" ]]; then
+            log_success "✓ 检测到Ubuntu环境: $VERSION_ID ($VERSION_CODENAME)"
+        else
+            log_warning "⚠ 当前环境不是Ubuntu，检测到: $ID"
+            log_info "注意: 此脚本专为 Termux proot Ubuntu 环境设计"
+            log_info "如果您确认在正确环境中，可以继续安装"
         fi
-        log_success "检测到Ubuntu环境: $VERSION_ID ($VERSION_CODENAME)"
     else
-        log_warning "无法检测操作系统版本，继续安装..."
+        log_warning "⚠ 无法读取 /etc/os-release，可能在兼容环境中"
     fi
     
     # 检查proot特征
-    if [[ "$PROOT_L2S_DIR" != "" ]] || [[ "$PREFIX" != "" ]] || pgrep -f "proot" > /dev/null 2>&1; then
-        log_success "检测到 proot 环境"
+    if [[ -n "$PROOT_L2S_DIR" ]]; then
+        log_success "✓ 检测到proot环境变量 (PROOT_L2S_DIR)"
+    elif [[ -n "$PREFIX" ]] && [[ "$PREFIX" =~ termux ]]; then
+        log_success "✓ 检测到Termux环境变量 (PREFIX)"
+    elif pgrep -f "proot" > /dev/null 2>&1; then
+        log_success "✓ 检测到proot进程运行"
     else
-        log_warning "未明确检测到proot环境，但继续安装..."
+        log_warning "⚠ 未检测到明显的proot特征"
+        log_info "如果您在Termux proot环境中，这可能是正常的"
     fi
     
-    # 检查apt可用性
+    # 检查包管理器（优先apt，fallback到其他）
     if command -v apt >/dev/null 2>&1; then
-        log_success "apt 包管理器可用"
+        log_success "✓ 找到apt包管理器"
+    elif command -v brew >/dev/null 2>&1; then
+        log_warning "⚠ 检测到brew包管理器（macOS）"
+        log_info "注意: 此脚本为Ubuntu设计，在macOS上可能需要调整"
+        log_info "建议使用 ./install-mac.sh 进行macOS安装"
     else
-        log_error "apt 包管理器不可用"
+        log_error "✗ 未找到支持的包管理器"
+        log_info "此脚本需要apt (Ubuntu) 或 brew (macOS)"
         return 1
     fi
     
@@ -164,6 +176,22 @@ check_python_environment() {
 install_system_dependencies() {
     log_step "安装系统依赖..."
     
+    # 验证apt命令是否为真正的Debian/Ubuntu apt
+    if apt --version 2>&1 | grep -q "Java\|APKTool"; then
+        log_error "检测到非Ubuntu的apt命令（可能是Java APKTool）"
+        log_info "您似乎在macOS环境中运行此脚本"
+        log_info "请使用: ./install-mac.sh 进行macOS安装"
+        return 1
+    fi
+    
+    # 检查是否有dpkg（Ubuntu/Debian特有）
+    if ! command -v dpkg >/dev/null 2>&1; then
+        log_error "未找到dpkg包管理器，这不是Ubuntu/Debian系统"
+        log_info "此脚本仅适用于Termux proot Ubuntu环境"
+        log_info "对于macOS，请使用: ./install-mac.sh"
+        return 1
+    fi
+    
     local total_steps=4
     local current_step=0
     
@@ -175,6 +203,11 @@ install_system_dependencies() {
         log_success "包列表更新完成"
     else
         log_warning "包列表更新有警告，查看 /tmp/apt_update.log"
+        # 检查是否是严重错误
+        if grep -q "Java\|Unable to locate a Java Runtime" /tmp/apt_update.log; then
+            log_error "apt命令指向错误的程序，请使用macOS安装脚本"
+            return 1
+        fi
     fi
     
     # 安装基础构建工具
