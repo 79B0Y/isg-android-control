@@ -104,16 +104,27 @@ check_proot_environment() {
         log_info "如果您在Termux proot环境中，这可能是正常的"
     fi
     
-    # 检查包管理器（优先apt，fallback到其他）
+    # 检查包管理器和环境
     if command -v apt >/dev/null 2>&1; then
-        log_success "✓ 找到apt包管理器"
+        # 验证这是真正的Ubuntu apt，而不是macOS上的Java工具
+        if apt --version 2>&1 | grep -q "Java\|Unable to locate a Java Runtime"; then
+            log_error "✗ 检测到macOS上的apt命令（Java工具）"
+            log_info "您当前在macOS环境中，不是Termux proot Ubuntu"
+            log_info "请使用: ./install-mac.sh 进行macOS安装"
+            return 1
+        elif apt --version 2>&1 | grep -q "apt.*ubuntu\|apt.*debian"; then
+            log_success "✓ 找到Ubuntu/Debian apt包管理器"
+        else
+            log_warning "⚠ apt命令存在但版本信息异常"
+        fi
     elif command -v brew >/dev/null 2>&1; then
-        log_warning "⚠ 检测到brew包管理器（macOS）"
-        log_info "注意: 此脚本为Ubuntu设计，在macOS上可能需要调整"
-        log_info "建议使用 ./install-mac.sh 进行macOS安装"
+        log_error "✗ 检测到brew包管理器（macOS环境）"
+        log_info "您当前在macOS环境中，不是Termux proot Ubuntu"
+        log_info "请使用: ./install-mac.sh 进行macOS安装"
+        return 1
     else
         log_error "✗ 未找到支持的包管理器"
-        log_info "此脚本需要apt (Ubuntu) 或 brew (macOS)"
+        log_info "此脚本需要Ubuntu/Debian环境中的apt包管理器"
         return 1
     fi
     
