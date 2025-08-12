@@ -491,9 +491,10 @@ setup_adb_environment() {
             echo "  adb connect <设备IP>:5555"
         fi
     else
-        log_error "ADB未安装或不可用"
-        log_info "请检查android-tools-adb包是否正确安装"
-        return 1
+        # 在Termux/proot中ADB可能不可用；不应导致安装失败
+        log_warning "ADB未安装或不可用，跳过ADB配置（安装继续）"
+        log_info "稍后可运行: apt update && apt install -y android-tools-adb"
+        return 0
     fi
     
     return 0

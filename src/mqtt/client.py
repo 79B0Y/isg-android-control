@@ -8,7 +8,10 @@ import json
 from typing import Dict, Any, Callable, Optional
 from datetime import datetime
 
-import paho.mqtt.client as mqtt
+try:
+    import paho.mqtt.client as mqtt
+except Exception:  # Termux/proot may skip optional deps
+    mqtt = None
 from loguru import logger
 
 from src.core.config import get_settings
@@ -22,17 +25,25 @@ class MQTTClient:
         self.settings = get_settings()
         self.mqtt_config = self.settings.mqtt
         
-        self.client: Optional[mqtt.Client] = None
+        self.client: Optional["mqtt.Client"] = None  # type: ignore[name-defined]
         self.is_connected = False
         self.message_handlers: Dict[str, Callable] = {}
         self.reconnect_task: Optional[asyncio.Task] = None
         self.event_loop: Optional[asyncio.AbstractEventLoop] = None
         
-        logger.info(f"MQTT Client initialized, broker: {self.mqtt_config.broker_host}:{self.mqtt_config.broker_port}")
+        if mqtt is None:
+            logger.warning("paho-mqtt not installed; MQTT features disabled")
+        else:
+            logger.info(
+                f"MQTT Client initialized, broker: {self.mqtt_config.broker_host}:{self.mqtt_config.broker_port}"
+            )
     
     async def connect(self) -> bool:
         """连接到MQTT broker"""
         try:
+            if mqtt is None:
+                logger.warning("MQTT not available (paho-mqtt missing) — skipping connect")
+                return False
             # 保存当前事件循环
             self.event_loop = asyncio.get_event_loop()
             
@@ -111,6 +122,8 @@ class MQTTClient:
     async def disconnect(self):
         """断开MQTT连接"""
         try:
+            if mqtt is None:
+                return
             if self.reconnect_task:
                 self.reconnect_task.cancel()
                 self.reconnect_task = None
@@ -209,6 +222,9 @@ class MQTTClient:
     async def publish(self, topic: str, payload: Any, qos: int = None, retain: bool = None) -> bool:
         """发布消息"""
         try:
+            if mqtt is None:
+                logger.warning("MQTT not available; skipping publish")
+                return False
             if not self.client or not self.is_connected:
                 logger.warning("MQTT client not connected, cannot publish message")
                 return False
@@ -240,6 +256,9 @@ class MQTTClient:
     async def subscribe(self, topic: str, handler: Callable[[str, str], None], qos: int = None) -> bool:
         """订阅主题"""
         try:
+            if mqtt is None:
+                logger.warning("MQTT not available; skipping subscribe")
+                return False
             if not self.client or not self.is_connected:
                 logger.warning("MQTT client not connected, cannot subscribe")
                 return False
@@ -266,6 +285,8 @@ class MQTTClient:
     async def unsubscribe(self, topic: str) -> bool:
         """取消订阅主题"""
         try:
+            if mqtt is None:
+                return True
             if not self.client:
                 return False
             

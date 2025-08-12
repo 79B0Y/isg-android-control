@@ -34,34 +34,25 @@ async def lifespan(app: FastAPI):
         get_settings.cache_clear()
         settings = get_settings()
         
-        # 手动设置正确的配置
-        settings.mqtt.broker_host = "192.168.3.60"
-        settings.mqtt.username = "admin"  
-        settings.mqtt.password = "admin"
-        settings.mqtt.keep_alive = 60  # 使用较长的keep alive
-        settings.mqtt.qos = 0  # QoS 0更稳定
-        settings.mqtt.retain = False
-        # 使用固定客户端ID避免冲突
-        settings.mqtt.client_id = f"android_ctrl_stable"
-        settings.adb.device_serial = "192.168.3.60:5555"
-        
-        # 初始化MQTT客户端和Home Assistant集成
-        mqtt_client = MQTTClient()
-        ha_integration = HomeAssistantMQTT()
-        
-        # 重新启用MQTT进行调试
-        logger.info("Re-enabling MQTT for debugging")
-        await mqtt_client.connect()
-        await ha_integration.setup()
-        
-        # 添加通配符订阅来捕获所有消息
-        async def debug_handler(topic: str, payload: str):
-            logger.warning(f"🔍 DEBUG: Received MQTT message - Topic: {topic}, Payload: {payload}")
-        
-        await mqtt_client.subscribe("homeassistant/#", debug_handler)
-        await mqtt_client.subscribe("#", debug_handler)  # 捕获所有主题
-        
-        logger.info("MQTT and Home Assistant integration initialized")
+        # 可选的MQTT与Home Assistant集成（Termux/proot可能缺失依赖或网络受限）
+        try:
+            mqtt_client = MQTTClient()
+            ha_integration = HomeAssistantMQTT()
+            # 仅在配置存在时尝试连接
+            if settings.mqtt and settings.mqtt.broker_host:
+                logger.info("Initializing optional MQTT/Home Assistant integration")
+                await mqtt_client.connect()
+                try:
+                    await ha_integration.setup()
+                except Exception as e:
+                    logger.warning(f"Home Assistant setup skipped: {e}")
+                
+                async def debug_handler(topic: str, payload: str):
+                    logger.debug(f"MQTT message - Topic: {topic}, Payload: {payload}")
+                
+                await mqtt_client.subscribe("homeassistant/#", debug_handler)
+        except Exception as e:
+            logger.warning(f"MQTT disabled or failed to initialize: {e}")
         yield
     finally:
         # 清理资源
