@@ -207,7 +207,7 @@ install_system_dependencies() {
     local current_step=0
     
     # 更新包列表
-    ((current_step++))
+    ((current_step+=1))
     show_progress $current_step $total_steps "更新包列表..."
     log_info "更新apt包列表..."
     if apt update > /tmp/apt_update.log 2>&1; then
@@ -222,7 +222,7 @@ install_system_dependencies() {
     fi
     
     # 安装基础构建工具
-    ((current_step++))
+    ((current_step+=1))
     show_progress $current_step $total_steps "安装基础构建工具..."
     log_info "安装基础构建工具..."
     
@@ -244,7 +244,7 @@ install_system_dependencies() {
     fi
     
     # 安装Python相关包
-    ((current_step++))
+    ((current_step+=1))
     show_progress $current_step $total_steps "安装Python环境..."
     log_info "安装Python开发环境..."
     
@@ -265,7 +265,7 @@ install_system_dependencies() {
     fi
     
     # 安装项目特定依赖
-    ((current_step++))
+    ((current_step+=1))
     show_progress $current_step $total_steps "安装项目依赖..."
     log_info "安装项目特定依赖..."
     
@@ -1138,7 +1138,7 @@ main_installation() {
     local current_step=0
     
     for step in "${steps[@]}"; do
-        ((current_step++))
+        ((current_step+=1))
         echo -e "${PURPLE}[步骤 $current_step/$total_steps]${NC} 执行: $step"
         # 执行每个步骤时禁用 set -e，捕获返回码以便更友好地报告错误
         set +e
