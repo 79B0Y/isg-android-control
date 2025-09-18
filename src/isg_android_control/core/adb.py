@@ -388,6 +388,20 @@ class ADBController:
                         if m:
                             cur = int(m.group(1))
         
+        # If we still don't have max value, try alternative method
+        if maxv is None:
+            try:
+                # Try to get max volume from system settings
+                max_out = await self._run("shell", "settings", "get", "system", "volume_music_max", timeout=5.0)
+                if max_out.strip().isdigit():
+                    maxv = int(max_out.strip())
+            except Exception:
+                pass
+        
+        # If still no max value, use a reasonable default based on Android standards
+        if maxv is None:
+            maxv = 15  # Most Android devices use 15 as max volume steps
+        
         return {"current": cur, "max": maxv}
 
     async def audio_full_info(self) -> dict:
@@ -471,10 +485,20 @@ class ADBController:
                         if m:
                             stream_data["current"] = int(m.group(1))
         
-        # Calculate percentages
+        # Calculate percentages with improved logic
         for stream_name, stream_data in result.items():
             if stream_name != "ringer_mode" and stream_data["max"] and stream_data["current"] is not None:
-                stream_data["percent"] = round(stream_data["current"] / stream_data["max"] * 100, 1)
+                # Ensure we have valid values
+                current = stream_data["current"]
+                max_val = stream_data["max"]
+                
+                if max_val > 0:
+                    # Calculate percentage with proper bounds checking
+                    percent = round(current / max_val * 100, 1)
+                    # Ensure percentage is within 0-100 range
+                    stream_data["percent"] = max(0, min(100, percent))
+                else:
+                    stream_data["percent"] = 0
         
         return result
 
@@ -942,30 +966,49 @@ class ADBController:
             return {'music': {}, 'ring': {}, 'alarm': {}, 'ringer_mode': 'UNKNOWN'}
     
     async def _get_memory_info_proc(self) -> Optional[Dict[str, Any]]:
-        """Get memory information from /proc/meminfo (faster than dumpsys)."""
+        """Get memory information from /proc/meminfo with improved parsing."""
         try:
-            # Get usage percentage
-            usage_output = await self._run("shell", "awk", "'/MemTotal/ {tot=$2} /MemAvailable/ {ava=$2} END { if(tot>0){printf \"%.1f\\n\", (1-ava/tot)*100} else {print \"unknown\"}}' /proc/meminfo", timeout=5.0)
-            usage = usage_output.strip()
-            
-            # Also get raw values for compatibility
+            # Get memory info using multiple methods for better accuracy
             raw_output = await self._run("shell", "cat", "/proc/meminfo", timeout=5.0)
-            total_kb = available_kb = None
+            total_kb = available_kb = free_kb = cached_kb = buffers_kb = None
             
             for line in raw_output.splitlines():
+                line = line.strip()
                 if line.startswith("MemTotal:"):
                     total_kb = int(line.split()[1])
                 elif line.startswith("MemAvailable:"):
                     available_kb = int(line.split()[1])
+                elif line.startswith("MemFree:"):
+                    free_kb = int(line.split()[1])
+                elif line.startswith("Cached:"):
+                    cached_kb = int(line.split()[1])
+                elif line.startswith("Buffers:"):
+                    buffers_kb = int(line.split()[1])
             
-            if total_kb and available_kb:
-                used_kb = total_kb - available_kb
+            # Calculate memory usage
+            if total_kb and total_kb > 0:
+                if available_kb is not None:
+                    # Use MemAvailable if available (more accurate)
+                    used_kb = total_kb - available_kb
+                    used_percent = (used_kb / total_kb) * 100
+                elif free_kb is not None:
+                    # Fallback to MemFree + Cached + Buffers
+                    used_kb = total_kb - free_kb
+                    if cached_kb is not None:
+                        used_kb -= cached_kb
+                    if buffers_kb is not None:
+                        used_kb -= buffers_kb
+                    used_percent = (used_kb / total_kb) * 100
+                else:
+                    used_kb = 0
+                    used_percent = 0
+                
                 return {
                     'total_kb': total_kb,
                     'available_kb': available_kb,
                     'used_kb': used_kb,
-                    'used_percent': float(usage) if usage != 'unknown' else 0.0,
-                    'raw_info': f"Total: {total_kb}KB, Available: {available_kb}KB, Used: {used_kb}KB ({usage}%)"
+                    'used_percent': round(used_percent, 1),
+                    'raw_info': f"Total: {total_kb}KB, Available: {available_kb}KB, Used: {used_kb}KB ({used_percent:.1f}%)"
                 }
         except Exception as e:
             logger.debug("Failed to get memory info from /proc/meminfo: %s", e)
@@ -995,8 +1038,32 @@ class ADBController:
         return None
     
     async def _get_cpu_usage(self) -> Optional[str]:
-        """Get CPU usage percentage efficiently."""
+        """Get CPU usage percentage using top command for better accuracy."""
         try:
+            # Use top command to get real-time CPU usage
+            output = await self._run("shell", "top", "-n", "1", "-d", "1", timeout=5.0)
+            
+            # Parse top output for CPU usage
+            lines = output.splitlines()
+            for line in lines:
+                line = line.strip()
+                # Look for CPU usage line (usually contains "CPU:")
+                if "CPU:" in line or "cpu" in line.lower():
+                    # Extract percentage from line like "CPU: 15% usr 5% sys 0% nic 80% idle"
+                    import re
+                    cpu_match = re.search(r'(\d+(?:\.\d+)?)%', line)
+                    if cpu_match:
+                        cpu_percent = float(cpu_match.group(1))
+                        # Calculate total CPU usage (100 - idle)
+                        if "idle" in line.lower():
+                            idle_match = re.search(r'(\d+(?:\.\d+)?)%\s*idle', line)
+                            if idle_match:
+                                idle_percent = float(idle_match.group(1))
+                                cpu_percent = 100 - idle_percent
+                        return f"{cpu_percent:.1f}%"
+                    break
+            
+            # Fallback to dumpsys cpuinfo if top doesn't work
             output = await self._run("shell", "dumpsys", "-t", "5", "cpuinfo", timeout=8.0)
             for line in output.splitlines():
                 if "TOTAL:" in line or line.strip().lower().startswith("total:"):

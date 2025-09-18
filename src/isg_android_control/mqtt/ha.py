@@ -225,12 +225,13 @@ class HAIntegration:
             }
             self.client.publish(self._disc_topic("sensor", "battery"), json.dumps(sensor_payload), retain=True)
 
-        # CPU usage sensor (user+kernel)
+        # CPU usage sensor (improved parsing)
         cpu_sensor = {
             "name": "Android CPU Usage",
             "state_topic": state_topic,
-            "value_template": "{{ ((value_json.cpu['user']|default(0)) + (value_json.cpu['kernel']|default(0)))|round(1) }}",
+            "value_template": "{{ value_json.cpu_usage | default('Unknown') }}",
             "unit_of_measurement": "%",
+            "icon": "mdi:cpu-64-bit",
             "unique_id": self._uid("cpu_usage"),
             "availability_topic": self.availability_topic,
             "payload_available": "online",
@@ -239,13 +240,13 @@ class HAIntegration:
         }
         self.client.publish(self._disc_topic("sensor", "cpu_usage"), json.dumps(cpu_sensor), retain=True)
 
-        # Memory used percent
+        # Memory used percent (improved parsing)
         mem_sensor = {
             "name": "Android Memory Used",
             "state_topic": state_topic,
-            "value_template": "{{ value_json.memory_summary.used_percent }}",
+            "value_template": "{{ value_json.mem.used_percent | default('Unknown') }}",
             "unit_of_measurement": "%",
-            "device_class": "power_factor",
+            "icon": "mdi:memory",
             "unique_id": self._uid("memory_used"),
             "availability_topic": self.availability_topic,
             "payload_available": "online",
