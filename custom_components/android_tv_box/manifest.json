@@ -1,0 +1,15 @@
+{
+  "domain": "android_tv_box",
+  "name": "Android TV Box",
+  "documentation": "https://github.com/your-repo/android-tv-box",
+  "requirements": [
+    "uiautomator2>=2.16.23",
+    "aiohttp>=3.8.0",
+    "aiohttp-cors>=0.7.0",
+    "paho-mqtt>=1.6.0"
+  ],
+  "dependencies": [],
+  "codeowners": ["@your-username"],
+  "version": "1.2.0",
+  "iot_class": "local_polling"
+}
