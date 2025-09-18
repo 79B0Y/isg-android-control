@@ -4,17 +4,5 @@
   "filename": "android_tv_box",
   "country": ["CN", "US", "GB", "DE", "FR", "ES", "IT", "NL", "AU", "CA"],
   "homeassistant": "2023.1.0",
-  "render_readme": true,
-  "iot_class": "Local Polling",
-  "integration_type": "hub",
-  "domain": "android_tv_box",
-  "documentation": "https://github.com/bobo/android-tv-box/blob/main/README.md",
-  "issue_tracker": "https://github.com/bobo/android-tv-box/issues",
-  "codeowners": ["@bobo"],
-  "requirements": [
-    "uiautomator2>=2.16.23",
-    "aiohttp>=3.8.0",
-    "aiohttp-cors>=0.7.0",
-    "paho-mqtt>=1.6.0"
-  ]
+  "render_readme": true
 }

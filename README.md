@@ -1,8 +1,12 @@
 # Android TV Box Integration
 
+[![hacs][hacsbadge]][hacs]
 ![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1.0+-green.svg)
-![Maintenance](https://img.shields.io/badge/Maintainer-@your-username-orange.svg)
+![Maintenance](https://img.shields.io/badge/Maintainer-@bobo-orange.svg)
+
+[hacs]: https://github.com/hacs/integration
+[hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg
 
 The Android TV Box integration allows you to control and monitor your Android TV Box through Home Assistant using ADB (Android Debug Bridge) commands. It provides comprehensive control over media playback, system settings, device monitoring, and remote control functionality.
 

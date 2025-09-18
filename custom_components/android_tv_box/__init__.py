@@ -5,17 +5,35 @@ from typing import Dict, Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.const import Platform
 
 from .config import DOMAIN
 from .adb_service import ADBService
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = ["media_player", "switch", "camera", "sensor", "remote", "select", "binary_sensor"]
+PLATFORMS = [
+    Platform.MEDIA_PLAYER,
+    Platform.SWITCH,
+    Platform.CAMERA,
+    Platform.SENSOR,
+    Platform.REMOTE,
+    Platform.SELECT,
+    Platform.BINARY_SENSOR,
+]
 
 
 async def async_setup(hass: HomeAssistant, config: Dict[str, Any]) -> bool:
-    """Set up the Android TV Box component."""
+    """Set up the Android TV Box component from configuration.yaml."""
+    # This integration is primarily configured via config flow
+    # but we support configuration.yaml for backward compatibility
+    if DOMAIN in config:
+        # Import from configuration.yaml
+        hass.async_create_task(
+            hass.config_entries.flow.async_init(
+                DOMAIN, context={"source": "import"}, data=config[DOMAIN]
+            )
+        )
     return True
 
 
