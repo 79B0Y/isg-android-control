@@ -36,8 +36,9 @@ if create_app is not None:
         monitor = app.state.monitor
         shots = app.state.shots
         cache = app.state.cache
-    except Exception:
+    except Exception as e:
         # Fall back to placeholders if app creation fails (dependencies missing)
+        print(f"App creation failed: {e}")
         app = SimpleNamespace(state=SimpleNamespace())  # type: ignore
         settings = SimpleNamespace()  # type: ignore
         adb = None  # type: ignore
@@ -258,12 +259,28 @@ async def mqtt_worker() -> None:
     from .mqtt.state import set_ha
     from .mqtt.cec_ha import CECHAIntegration
 
+    # Create default MQTT config if settings is not properly loaded
+    if hasattr(settings, 'mqtt'):
+        mqtt_config = settings.mqtt
+        device_id = settings.device.device_id
+        device_name = settings.device.device_name
+        max_image_bytes = getattr(settings.device, "camera_max_bytes", None)
+        retain_images = getattr(settings.device, "camera_retain", False)
+    else:
+        from .models.config import MQTTConfig, DeviceConfig
+        mqtt_config = MQTTConfig()
+        device_config = DeviceConfig()
+        device_id = device_config.device_id
+        device_name = device_config.device_name
+        max_image_bytes = None
+        retain_images = False
+    
     ha = HAIntegration(
-        settings.mqtt,
-        device_id=settings.device.device_id,
-        device_name=settings.device.device_name,
-        max_image_bytes=getattr(settings.device, "camera_max_bytes", None),
-        retain_images=getattr(settings.device, "camera_retain", False),
+        mqtt_config,
+        device_id=device_id,
+        device_name=device_name,
+        max_image_bytes=max_image_bytes,
+        retain_images=retain_images,
     )
 
     # Initialize CEC HA integration if CEC controller is available
@@ -739,9 +756,16 @@ async def handle_command(topic: str | None, payload: str, ha: HAIntegration) -> 
 
 async def serve() -> None:
     # Use configurable API host/port
-    config = uvicorn.Config(app, host=getattr(settings.api, "host", "0.0.0.0"), port=getattr(settings.api, "port", 8000), log_level="info")
+    if hasattr(settings, 'api'):
+        host = getattr(settings.api, "host", "0.0.0.0")
+        port = getattr(settings.api, "port", 8000)
+    else:
+        host = "0.0.0.0"
+        port = 8000
+    config = uvicorn.Config(app, host=host, port=port, log_level="info")
     server = uvicorn.Server(config)
-    await adb.connect()
+    if adb is not None:
+        await adb.connect()
     # Ensure cache is warmed up before concurrent tasks start
     try:
         if cache is not None and hasattr(cache, "warmup"):

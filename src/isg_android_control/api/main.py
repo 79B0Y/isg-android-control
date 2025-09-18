@@ -147,7 +147,7 @@ def create_app() -> FastAPI:
         return {"apps": settings.appmap.apps}
 
     @app.get("/apps/installed")
-    async def list_installed(pattern: str | None = None) -> dict:
+    async def list_installed(pattern: Optional[str] = None) -> dict:
         pkgs = await adb.list_packages(pattern)
         return {"packages": pkgs}
 
