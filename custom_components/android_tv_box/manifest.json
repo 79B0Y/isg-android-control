@@ -1,7 +1,7 @@
 {
   "domain": "android_tv_box",
   "name": "Android TV Box",
-  "documentation": "https://github.com/your-username/android-tv-box",
+  "documentation": "https://github.com/your-username/android-tv-box/blob/main/README.md",
   "issue_tracker": "https://github.com/your-username/android-tv-box/issues",
   "requirements": [
     "uiautomator2>=2.16.23",

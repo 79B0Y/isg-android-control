@@ -159,11 +159,4 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
-def get_adb_service(hass: HomeAssistant) -> ADBService:
-    """Get the ADB service instance."""
-    return hass.data[DOMAIN]["adb_service"]
-
-
-def get_config(hass: HomeAssistant) -> Dict[str, Any]:
-    """Get the configuration."""
-    return hass.data[DOMAIN]["config"]
+# Helper functions moved to helpers.py to avoid circular imports

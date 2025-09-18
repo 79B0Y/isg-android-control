@@ -7,7 +7,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from . import get_adb_service, get_config
+from .helpers import get_adb_service, get_config
 from .adb_service import ADBService
 
 _LOGGER = logging.getLogger(__name__)

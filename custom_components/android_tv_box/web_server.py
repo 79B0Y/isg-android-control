@@ -10,7 +10,8 @@ from aiohttp import web, ClientSession
 from aiohttp.web import Request, Response
 import aiohttp_cors
 
-from . import DOMAIN, get_adb_service, get_config
+from . import DOMAIN
+from .helpers import get_adb_service, get_config, set_config
 from .adb_service import ADBService
 
 _LOGGER = logging.getLogger(__name__)

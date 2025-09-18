@@ -6,7 +6,8 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity_component import EntityComponent
 
-from . import DOMAIN, get_adb_service, get_config
+from . import DOMAIN
+from .helpers import get_adb_service, get_config
 from .config import (
     SERVICE_SCREENSHOT_SCHEMA,
     SERVICE_LAUNCH_APP_SCHEMA,
