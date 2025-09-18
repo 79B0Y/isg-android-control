@@ -236,9 +236,26 @@ asyncio.run(test())
 
 配置完成后，启动系统：
 
+### 方法 1：使用启动脚本（推荐）
+
+```bash
+# 启动完整系统
+python3 start_system.py
+```
+
+### 方法 2：直接运行模块
+
 ```bash
 # 启动完整系统
 python3 -m isg_android_control.run
+```
+
+### 测试 ADB 连接
+
+在启动系统之前，建议先测试 ADB 连接：
+
+```bash
+python3 test_adb_android_box.py
 
 # 或只启动 API 服务器
 python3 -m isg_android_control.api.main
