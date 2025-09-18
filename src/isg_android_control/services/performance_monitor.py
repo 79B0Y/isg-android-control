@@ -202,12 +202,59 @@ class TermuxPerformanceMonitor:
 
         return None
 
-    async def kill_process(self, process: ProcessInfo) -> bool:
-        """Kill a process and log the action."""
+    async def get_app_info(self, pid: int) -> Dict[str, str]:
+        """Get detailed application information for a process."""
+        app_info = {
+            'package_name': 'unknown',
+            'app_name': 'unknown',
+            'user': 'unknown'
+        }
+        
         try:
+            # Try to get package name from Android process
+            proc = await asyncio.create_subprocess_exec(
+                'ps', '-p', str(pid), '-o', 'user,comm,args',
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL
+            )
+
+            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=2.0)
+
+            if proc.returncode == 0:
+                lines = stdout.decode().strip().split('\n')
+                if len(lines) > 1:
+                    parts = lines[1].split()
+                    if len(parts) >= 3:
+                        app_info['user'] = parts[0]
+                        app_info['app_name'] = parts[1]
+                        
+                        # Try to extract package name from command line
+                        full_cmd = ' '.join(parts[2:])
+                        if '.' in full_cmd:
+                            # Look for package-like patterns (com.example.app)
+                            import re
+                            package_match = re.search(r'([a-zA-Z][a-zA-Z0-9_]*\.[a-zA-Z][a-zA-Z0-9_]*\.[a-zA-Z][a-zA-Z0-9_]*)', full_cmd)
+                            if package_match:
+                                app_info['package_name'] = package_match.group(1)
+                            else:
+                                app_info['package_name'] = parts[1]
+
+        except Exception as e:
+            logger.debug("Failed to get app info for PID %d: %s", pid, e)
+
+        return app_info
+
+    async def kill_process(self, process: ProcessInfo) -> bool:
+        """Kill a process and log the action with detailed app information."""
+        try:
+            # Get detailed app information before killing
+            app_info = await self.get_app_info(process.pid)
+            
             logger.warning(
-                "Killing high CPU process: PID=%d, CPU=%.1f%%, Command=%s",
-                process.pid, process.cpu_percent, process.command
+                "Killing high CPU process: PID=%d, CPU=%.1f%%, Command=%s, "
+                "Package=%s, App=%s, User=%s",
+                process.pid, process.cpu_percent, process.command,
+                app_info['package_name'], app_info['app_name'], app_info['user']
             )
 
             # Try graceful termination first
@@ -220,11 +267,17 @@ class TermuxPerformanceMonitor:
             _, stderr = await asyncio.wait_for(proc.communicate(), timeout=2.0)
 
             if proc.returncode == 0:
-                logger.info("Successfully sent TERM signal to PID %d", process.pid)
+                logger.info(
+                    "Successfully sent TERM signal to PID %d (%s - %s)",
+                    process.pid, app_info['package_name'], app_info['app_name']
+                )
                 return True
 
             # If graceful termination failed, try force kill
-            logger.warning("TERM failed for PID %d, trying KILL: %s", process.pid, stderr.decode())
+            logger.warning(
+                "TERM failed for PID %d (%s), trying KILL: %s",
+                process.pid, app_info['package_name'], stderr.decode()
+            )
 
             proc = await asyncio.create_subprocess_exec(
                 'kill', '-KILL', str(process.pid),
@@ -235,10 +288,16 @@ class TermuxPerformanceMonitor:
             _, stderr = await asyncio.wait_for(proc.communicate(), timeout=2.0)
 
             if proc.returncode == 0:
-                logger.info("Successfully killed PID %d with KILL signal", process.pid)
+                logger.info(
+                    "Successfully killed PID %d (%s - %s) with KILL signal",
+                    process.pid, app_info['package_name'], app_info['app_name']
+                )
                 return True
             else:
-                logger.error("Failed to kill PID %d: %s", process.pid, stderr.decode())
+                logger.error(
+                    "Failed to kill PID %d (%s): %s",
+                    process.pid, app_info['package_name'], stderr.decode()
+                )
                 return False
 
         except Exception as e:
@@ -283,6 +342,9 @@ class TermuxPerformanceMonitor:
             if process.service_name is None:
                 process.service_name = await self.get_service_name(pid)
 
+            # Get app information for better logging
+            app_info = await self.get_app_info(pid)
+
             # Track violations
             if pid not in self.violation_counts:
                 self.violation_counts[pid] = 0
@@ -291,9 +353,11 @@ class TermuxPerformanceMonitor:
             self.violation_counts[pid] += 1
 
             logger.info(
-                "High CPU process detected: PID=%d, CPU=%.1f%%, Violations=%d/%d, Command=%s",
+                "High CPU process detected: PID=%d, CPU=%.1f%%, Violations=%d/%d, "
+                "Command=%s, Package=%s, App=%s, User=%s",
                 pid, process.cpu_percent, self.violation_counts[pid],
-                self.kill_after_violations, process.command
+                self.kill_after_violations, process.command,
+                app_info['package_name'], app_info['app_name'], app_info['user']
             )
 
             # Kill if violation threshold reached

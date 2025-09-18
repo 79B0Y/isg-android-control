@@ -405,7 +405,36 @@ async def mqtt_worker() -> None:
                 if cec_ha:
                     publish_tasks.append(cec_ha.publish_state_update())
 
+                # Add performance monitoring data publishing
+                if monitor.performance_monitor:
+                    try:
+                        perf_status = await monitor.performance_monitor.get_system_info()
+                        publish_tasks.append(asyncio.to_thread(ha.publish_performance_status, perf_status))
+                    except Exception as e:
+                        logger.debug("Failed to get performance status: %s", e)
+
                 await asyncio.gather(*publish_tasks, return_exceptions=True)
+                
+                # Publish performance violations data (less frequent)
+                if monitor.performance_monitor and hasattr(monitor.performance_monitor, 'violation_counts'):
+                    try:
+                        violations_data = {
+                            "active_violations": len(monitor.performance_monitor.violation_counts),
+                            "violation_details": {
+                                str(pid): {
+                                    "violations": count,
+                                    "timestamp": monitor.performance_monitor.violation_timestamps.get(pid, "").isoformat() if pid in monitor.performance_monitor.violation_timestamps else None
+                                }
+                                for pid, count in monitor.performance_monitor.violation_counts.items()
+                            },
+                            "cpu_threshold": monitor.performance_monitor.cpu_threshold,
+                            "kill_after_violations": monitor.performance_monitor.kill_after_violations,
+                            "monitoring_interval": monitor.performance_monitor.monitoring_interval,
+                            "auto_kill_enabled": monitor.performance_monitor.enable_auto_kill
+                        }
+                        await asyncio.to_thread(ha.publish_performance_violations, violations_data)
+                    except Exception as e:
+                        logger.debug("Failed to publish performance violations: %s", e)
                 
                 # Get app info
                 active_name = None

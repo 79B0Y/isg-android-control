@@ -36,6 +36,7 @@ The new `TermuxPerformanceMonitor` class provides:
 Added to `src/isg_android_control/api/main.py`:
 - `GET /performance`: Current performance metrics
 - `GET /performance/status`: Monitoring system status
+- `GET /performance/violations`: Current violations and statistics
 - `GET /system`: System info (load, memory)
 - `POST /performance/start`: Start monitoring
 - `POST /performance/stop`: Stop monitoring
@@ -45,9 +46,9 @@ Added to `src/isg_android_control/api/main.py`:
 ### Default Settings
 ```python
 TermuxPerformanceMonitor(
-    cpu_threshold=50.0,      # Kill processes using >50% CPU
+    cpu_threshold=50.0,       # Kill processes using >50% CPU
     monitoring_interval=0.5,  # Check every 500ms
-    kill_after_violations=3,  # Kill after 3 consecutive violations
+    kill_after_violations=4,  # Kill after 4 consecutive violations (2 seconds)
     enable_auto_kill=True     # Enable automatic process killing
 )
 ```
@@ -104,9 +105,10 @@ The system protects critical processes from automatic killing:
 ### Violation Tracking
 1. Monitor detects process using >50% CPU
 2. Increment violation counter for that PID
-3. After 3 consecutive violations (1.5 seconds), attempt to kill:
+3. After 4 consecutive violations (2 seconds), attempt to kill:
    - First try `kill -TERM PID` (graceful)
    - If fails, try `kill -KILL PID` (force)
+4. Enhanced logging includes package name, app name, and user information
 
 ### Logging
 All process kills are logged with:
@@ -125,10 +127,50 @@ The enhanced `MonitorService.snapshot()` now returns:
 ```json
 {
   "adb": { /* existing ADB metrics */ },
-  "performance": { /* new Termux metrics */ },
-  "system": { /* system load/memory info */ }
+  "performance": {
+    "timestamp": "2025-09-18T00:10:42.183764",
+    "total_cpu_usage": 45.2,
+    "total_memory_usage": 67.8,
+    "process_count": 123,
+    "high_cpu_process_count": 2,
+    "high_cpu_processes": [...]
+  },
+  "system": {
+    "load_average": {"1min": 1.23, "5min": 2.34, "15min": 3.45},
+    "monitoring_active": true,
+    "cpu_threshold": 50.0,
+    "auto_kill_enabled": true,
+    "active_violations": 0
+  }
 }
 ```
+
+## Home Assistant Integration
+
+### New Sensors
+The system now publishes additional sensors to Home Assistant:
+
+1. **Android High CPU Processes**
+   - Shows count of processes currently using >50% CPU
+   - Updates every monitoring cycle (500ms)
+
+2. **Android Process Monitoring**
+   - Shows monitoring status (Active/Inactive)
+   - Indicates if the monitoring system is running
+
+3. **Android Process Violations**
+   - Shows number of active violations
+   - Tracks processes that are approaching kill threshold
+
+### MQTT Topics
+- `{base_topic}/performance_status`: System monitoring status
+- `{base_topic}/performance_violations`: Current violations data
+- `{base_topic}/state_json`: Enhanced with performance metrics
+
+### API Integration
+You can also query the monitoring system directly via HTTP:
+- `GET /performance/violations`: Get current violation statistics
+- `GET /performance/status`: Get monitoring system status
 
 ### Backward Compatibility
 All existing ADB-based monitoring continues to work unchanged. The new Termux monitoring is additive.

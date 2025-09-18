@@ -28,7 +28,7 @@ class MonitorService:
             self.performance_monitor = TermuxPerformanceMonitor(
                 cpu_threshold=50.0,  # Kill processes using >50% CPU
                 monitoring_interval=0.5,  # Check every 500ms
-                kill_after_violations=3,  # Kill after 3 consecutive violations
+                kill_after_violations=4,  # Kill after 4 consecutive violations (2 seconds)
                 enable_auto_kill=True
             )
 

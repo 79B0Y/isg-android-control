@@ -296,6 +296,50 @@ class HAIntegration:
         }
         self.client.publish(self._disc_topic("sensor", "storage_used"), json.dumps(storage_sensor), retain=True)
 
+        # High CPU process count sensor
+        high_cpu_sensor = {
+            "name": "Android High CPU Processes",
+            "state_topic": state_topic,
+            "value_template": "{{ value_json.performance.high_cpu_process_count | default(0) }}",
+            "unit_of_measurement": "processes",
+            "icon": "mdi:cpu-64-bit",
+            "unique_id": self._uid("high_cpu_processes"),
+            "availability_topic": self.availability_topic,
+            "payload_available": "online",
+            "payload_not_available": "offline",
+            "device": self.device.__dict__,
+        }
+        self.client.publish(self._disc_topic("sensor", "high_cpu_processes"), json.dumps(high_cpu_sensor), retain=True)
+
+        # Process monitoring status sensor
+        monitoring_sensor = {
+            "name": "Android Process Monitoring",
+            "state_topic": f"{self.cfg.base_topic}/performance_status",
+            "value_template": "{{ 'Active' if value_json.monitoring_active else 'Inactive' }}",
+            "icon": "mdi:monitor-dashboard",
+            "unique_id": self._uid("process_monitoring"),
+            "availability_topic": self.availability_topic,
+            "payload_available": "online",
+            "payload_not_available": "offline",
+            "device": self.device.__dict__,
+        }
+        self.client.publish(self._disc_topic("sensor", "process_monitoring"), json.dumps(monitoring_sensor), retain=True)
+
+        # Process violations count sensor
+        violations_sensor = {
+            "name": "Android Process Violations",
+            "state_topic": f"{self.cfg.base_topic}/performance_violations",
+            "value_template": "{{ value_json.active_violations | default(0) }}",
+            "unit_of_measurement": "violations",
+            "icon": "mdi:alert-circle",
+            "unique_id": self._uid("process_violations"),
+            "availability_topic": self.availability_topic,
+            "payload_available": "online",
+            "payload_not_available": "offline",
+            "device": self.device.__dict__,
+        }
+        self.client.publish(self._disc_topic("sensor", "process_violations"), json.dumps(violations_sensor), retain=True)
+
         if has_battery:
             # Battery temperature
             temp_sensor = {
@@ -377,6 +421,14 @@ class HAIntegration:
     def publish_state(self, state: dict) -> None:
         # Publish JSON aggregate state to state_json to avoid conflicts with simple screen:on/off on state
         self.client.publish(f"{self.cfg.base_topic}/state_json", json.dumps(state), retain=True)
+
+    def publish_performance_status(self, status: dict) -> None:
+        """Publish performance monitoring status."""
+        self.client.publish(f"{self.cfg.base_topic}/performance_status", json.dumps(status), retain=True)
+
+    def publish_performance_violations(self, violations: dict) -> None:
+        """Publish performance violations data."""
+        self.client.publish(f"{self.cfg.base_topic}/performance_violations", json.dumps(violations), retain=True)
 
     def publish_screen_simple(self, on: bool, retain: bool = True) -> None:
         """Publish a simple screen status message to <base>/state as 'screen:on/off'.

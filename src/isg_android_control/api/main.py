@@ -362,6 +362,26 @@ def create_app() -> FastAPI:
         await monitor.stop_performance_monitoring()
         return {"status": "stopped"}
 
+    @app.get("/performance/violations")
+    async def get_performance_violations() -> dict:
+        """Get current performance violations and statistics."""
+        if monitor.performance_monitor:
+            return {
+                "active_violations": len(monitor.performance_monitor.violation_counts),
+                "violation_details": {
+                    str(pid): {
+                        "violations": count,
+                        "timestamp": monitor.performance_monitor.violation_timestamps.get(pid, "").isoformat() if pid in monitor.performance_monitor.violation_timestamps else None
+                    }
+                    for pid, count in monitor.performance_monitor.violation_counts.items()
+                },
+                "cpu_threshold": monitor.performance_monitor.cpu_threshold,
+                "kill_after_violations": monitor.performance_monitor.kill_after_violations,
+                "monitoring_interval": monitor.performance_monitor.monitoring_interval,
+                "auto_kill_enabled": monitor.performance_monitor.enable_auto_kill
+            }
+        return {"error": "Performance monitoring not available"}
+
     # ADB connection management endpoints
     @app.get("/adb/status")
     async def adb_status() -> dict:
