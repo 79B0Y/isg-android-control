@@ -53,6 +53,10 @@ class ADBController:
     def _target(self) -> List[str]:
         if self.serial:
             return ["-s", self.serial]
+        # For localhost connections in Android box environment, 
+        # try without -s parameter first if it's 127.0.0.1
+        if self.host == "127.0.0.1" or self.host == "localhost":
+            return []  # Let ADB auto-select the device
         return ["-s", f"{self.host}:{self.port}"]
 
     def _update_activity(self) -> None:
@@ -170,6 +174,19 @@ class ADBController:
         # Use host:port pattern for connection
         target = f"{self.host}:{self.port}"
         logger.info("Connecting to ADB at %s", target)
+
+        # For localhost connections in Android box environment, 
+        # skip explicit connect as device may already be available
+        if self.host == "127.0.0.1" or self.host == "localhost":
+            logger.info("Skipping explicit connect for localhost - checking device availability")
+            try:
+                # Just check if device is available
+                await self._run_without_ensure("shell", "echo", "connection_test", timeout=5.0)
+                logger.info("Localhost device is available")
+                return "Using localhost device"
+            except Exception as e:
+                logger.debug("Localhost device not immediately available, trying explicit connect: %s", e)
+                # Fall through to explicit connect
 
         try:
             # Run host-level connect WITHOUT selecting a transport

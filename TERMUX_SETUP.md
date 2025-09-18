@@ -119,7 +119,17 @@ pkg install -y procps-ng  # 提供 top, ps 等命令
 
 ### ADB 连接失败
 
-如果看到错误 `adb: device '127.0.0.1:5555' not found`，这通常是因为 ADB 服务器缓存了错误的连接信息。
+如果看到错误 `adb: device '127.0.0.1:5555' not found`，这通常是因为：
+
+1. **ADB 服务器缓存了错误的连接信息**
+2. **在 Android 盒子环境中，ADB 连接方式需要特殊处理**
+
+#### 自动配置
+
+运行自动配置脚本：
+```bash
+python3 scripts/auto_configure_adb.py
+```
 
 #### 快速修复
 
@@ -153,6 +163,23 @@ pkg install -y procps-ng  # 提供 top, ps 等命令
 ```bash
 python3 scripts/diagnose_adb.py
 ```
+
+#### Android 盒子环境特殊说明
+
+在 Android 盒子的 Termux Ubuntu 环境中：
+
+1. **ADB 连接到本机 Android 系统**：
+   - 使用 `127.0.0.1:5555` 或 `localhost:5555`
+   - 不需要 `-s` 参数（系统会自动选择设备）
+
+2. **常见问题**：
+   - 手动 `adb connect 127.0.0.1` 可以连接
+   - 但程序中使用 `adb -s 127.0.0.1:5555` 失败
+   - 这是因为 Android 盒子环境中的设备标识符可能不同
+
+3. **解决方案**：
+   - 运行 `python3 scripts/auto_configure_adb.py` 自动配置
+   - 或手动修改 `configs/device.yaml` 中的 `adb_host: 127.0.0.1`
 
 #### 其他检查
 
