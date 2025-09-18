@@ -1,8 +1,8 @@
 {
   "domain": "android_tv_box",
   "name": "Android TV Box",
-  "documentation": "https://github.com/your-username/android-tv-box/blob/main/README.md",
-  "issue_tracker": "https://github.com/your-username/android-tv-box/issues",
+  "documentation": "https://github.com/bobo/android-tv-box/blob/main/README.md",
+  "issue_tracker": "https://github.com/bobo/android-tv-box/issues",
   "requirements": [
     "uiautomator2>=2.16.23",
     "aiohttp>=3.8.0",
@@ -10,7 +10,7 @@
     "paho-mqtt>=1.6.0"
   ],
   "dependencies": [],
-  "codeowners": ["@your-username"],
+  "codeowners": ["@bobo"],
   "version": "1.2.0",
   "iot_class": "local_polling",
   "integration_type": "hub"

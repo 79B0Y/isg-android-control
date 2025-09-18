@@ -8,9 +8,9 @@
   "iot_class": "Local Polling",
   "integration_type": "hub",
   "domain": "android_tv_box",
-  "documentation": "https://github.com/your-username/android-tv-box/blob/main/README.md",
-  "issue_tracker": "https://github.com/your-username/android-tv-box/issues",
-  "codeowners": ["@your-username"],
+  "documentation": "https://github.com/bobo/android-tv-box/blob/main/README.md",
+  "issue_tracker": "https://github.com/bobo/android-tv-box/issues",
+  "codeowners": ["@bobo"],
   "requirements": [
     "uiautomator2>=2.16.23",
     "aiohttp>=3.8.0",
