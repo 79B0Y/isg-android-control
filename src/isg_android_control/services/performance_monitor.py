@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import re
 import subprocess
 from typing import Dict, List, Optional, Set, Tuple
@@ -62,31 +63,68 @@ class TermuxPerformanceMonitor:
             'isg-android-control', 'python', 'python3'
         }
 
+        # Detect environment
+        self.is_termux = self._detect_termux_environment()
         self._monitoring = False
         self._monitor_task: Optional[asyncio.Task] = None
+
+    def _detect_termux_environment(self) -> bool:
+        """Detect if running in Termux environment."""
+        try:
+            # Check for Termux-specific environment variables
+            if os.environ.get('PREFIX') and '/com.termux' in os.environ.get('PREFIX', ''):
+                return True
+            
+            # Check for Android-specific files
+            if os.path.exists('/system/build.prop'):
+                return True
+                
+            # Check for Termux-specific paths
+            if os.path.exists('/data/data/com.termux'):
+                return True
+                
+            return False
+        except Exception:
+            return False
 
     async def get_top_output(self) -> str:
         """Get top command output with optimized parameters for Android/Termux."""
         try:
-            # Use top with batch mode, 1 iteration, showing all processes
-            # -b: batch mode, -n 1: one iteration, -o %CPU: sort by CPU
-            proc = await asyncio.create_subprocess_exec(
-                'top', '-b', '-n', '1', '-o', '%CPU',
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
+            # Try different top command variations for different environments
+            commands_to_try = [
+                # Linux/Termux style
+                ['top', '-b', '-n', '1', '-o', '%CPU'],
+                # Alternative Linux style
+                ['top', '-b', '-n', '1'],
+                # Simple top
+                ['top', '-n', '1'],
+                # Basic top
+                ['top']
+            ]
+            
+            for cmd in commands_to_try:
+                try:
+                    proc = await asyncio.create_subprocess_exec(
+                        *cmd,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE
+                    )
 
-            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=5.0)
+                    stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=5.0)
 
-            if proc.returncode != 0:
-                logger.warning("top command failed with code %d: %s", proc.returncode, stderr.decode())
-                return ""
-
-            return stdout.decode('utf-8', errors='ignore')
-
-        except asyncio.TimeoutError:
-            logger.warning("top command timed out")
+                    if proc.returncode == 0:
+                        return stdout.decode('utf-8', errors='ignore')
+                    else:
+                        logger.debug("top command '%s' failed with code %d: %s", ' '.join(cmd), proc.returncode, stderr.decode())
+                        continue
+                        
+                except Exception as e:
+                    logger.debug("top command '%s' failed: %s", ' '.join(cmd), e)
+                    continue
+            
+            logger.warning("All top command variations failed")
             return ""
+
         except Exception as e:
             logger.error("Error running top command: %s", e)
             return ""
@@ -455,40 +493,56 @@ class TermuxPerformanceMonitor:
     async def get_system_info(self) -> Dict[str, any]:
         """Get general system information."""
         try:
-            # Get load average
-            with open('/proc/loadavg', 'r') as f:
-                load_line = f.read().strip()
-                load_parts = load_line.split()
-                load_avg = {
-                    '1min': float(load_parts[0]),
-                    '5min': float(load_parts[1]),
-                    '15min': float(load_parts[2])
-                }
-
-            # Get memory info
-            memory_info = {}
-            with open('/proc/meminfo', 'r') as f:
-                for line in f:
-                    if ':' in line:
-                        key, value = line.split(':', 1)
-                        key = key.strip()
-                        value = value.strip()
-                        if 'kB' in value:
-                            value = int(value.split()[0]) * 1024  # Convert to bytes
-                        memory_info[key] = value
-
-            return {
-                'load_average': load_avg,
-                'memory': memory_info,
+            system_info = {
                 'monitoring_active': self._monitoring,
                 'cpu_threshold': self.cpu_threshold,
                 'auto_kill_enabled': self.enable_auto_kill,
                 'active_violations': len(self.violation_counts)
             }
+            
+            # Try to get load average (Linux/Termux)
+            try:
+                with open('/proc/loadavg', 'r') as f:
+                    load_line = f.read().strip()
+                    load_parts = load_line.split()
+                    if len(load_parts) >= 3:
+                        system_info['load_average'] = {
+                            '1min': float(load_parts[0]),
+                            '5min': float(load_parts[1]),
+                            '15min': float(load_parts[2])
+                        }
+            except (FileNotFoundError, ValueError, IndexError) as e:
+                logger.debug("Could not read load average: %s", e)
+                system_info['load_average'] = {'1min': 0.0, '5min': 0.0, '15min': 0.0}
+
+            # Try to get memory info (Linux/Termux)
+            try:
+                memory_info = {}
+                with open('/proc/meminfo', 'r') as f:
+                    for line in f:
+                        if ':' in line:
+                            key, value = line.split(':', 1)
+                            key = key.strip()
+                            value = value.strip()
+                            if 'kB' in value:
+                                try:
+                                    value = int(value.split()[0]) * 1024  # Convert to bytes
+                                except ValueError:
+                                    pass
+                            memory_info[key] = value
+                system_info['memory'] = memory_info
+            except (FileNotFoundError, ValueError) as e:
+                logger.debug("Could not read memory info: %s", e)
+                system_info['memory'] = {}
+
+            return system_info
 
         except Exception as e:
             logger.error("Error getting system info: %s", e)
             return {
                 'error': str(e),
-                'monitoring_active': self._monitoring
+                'monitoring_active': self._monitoring,
+                'cpu_threshold': self.cpu_threshold,
+                'auto_kill_enabled': self.enable_auto_kill,
+                'active_violations': len(self.violation_counts)
             }
