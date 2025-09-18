@@ -53,10 +53,10 @@ class ADBController:
     def _target(self) -> List[str]:
         if self.serial:
             return ["-s", self.serial]
-        # For localhost connections in Android box environment, 
-        # try without -s parameter first if it's 127.0.0.1
-        if self.host == "127.0.0.1" or self.host == "localhost":
-            return []  # Let ADB auto-select the device
+        # Use the best available device if we have one cached
+        if hasattr(self, '_best_device') and self._best_device:
+            return ["-s", self._best_device]
+        # Fallback to configured host:port
         return ["-s", f"{self.host}:{self.port}"]
 
     def _update_activity(self) -> None:
@@ -69,6 +69,50 @@ class ADBController:
 
         if self._connected:
             self._disconnect_task = asyncio.create_task(self._auto_disconnect())
+
+    async def _get_available_devices(self) -> List[str]:
+        """Get list of available ADB devices"""
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "adb", "devices",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=5.0)
+            if proc.returncode != 0:
+                return []
+            
+            lines = stdout.decode('utf-8', errors='replace').strip().split('\n')[1:]  # Skip header
+            devices = []
+            for line in lines:
+                if line.strip() and '\t' in line:
+                    device_id, status = line.split('\t', 1)
+                    if status.strip() == 'device':
+                        devices.append(device_id)
+            return devices
+        except Exception:
+            return []
+
+    async def _find_best_device(self) -> Optional[str]:
+        """Find the best available device for connection"""
+        devices = await self._get_available_devices()
+        
+        if not devices:
+            return None
+        
+        # If we have a specific host:port target, look for it first
+        target = f"{self.host}:{self.port}"
+        if target in devices:
+            return target
+        
+        # For localhost connections, look for any localhost or emulator device
+        if self.host == "127.0.0.1" or self.host == "localhost":
+            localhost_devices = [d for d in devices if d.startswith(('127.0.0.1', 'localhost', 'emulator'))]
+            if localhost_devices:
+                return localhost_devices[0]
+        
+        # Return the first available device
+        return devices[0]
 
     async def _auto_disconnect(self) -> None:
         """Automatically disconnect after inactivity timeout."""
@@ -175,17 +219,23 @@ class ADBController:
         target = f"{self.host}:{self.port}"
         logger.info("Connecting to ADB at %s", target)
 
-        # For localhost connections in Android box environment, 
-        # skip explicit connect as device may already be available
-        if self.host == "127.0.0.1" or self.host == "localhost":
-            logger.info("Skipping explicit connect for localhost - checking device availability")
+        # Find the best available device first
+        best_device = await self._find_best_device()
+        if best_device:
+            logger.info("Found available device: %s", best_device)
+            self._best_device = best_device
+            # Test if this device works
             try:
-                # Just check if device is available
+                # Temporarily set the target to test
+                original_target = self._target
+                self._target = lambda: ["-s", best_device]
                 await self._run_without_ensure("shell", "echo", "connection_test", timeout=5.0)
-                logger.info("Localhost device is available")
-                return "Using localhost device"
+                logger.info("Device %s is working", best_device)
+                return f"Using device {best_device}"
             except Exception as e:
-                logger.debug("Localhost device not immediately available, trying explicit connect: %s", e)
+                logger.debug("Device %s test failed: %s", best_device, e)
+                # Reset target method
+                self._target = original_target
                 # Fall through to explicit connect
 
         try:
