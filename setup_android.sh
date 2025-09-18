@@ -2,6 +2,8 @@
 
 # Android TV Box Setup Script for Termux
 # Run this script in Termux to set up ADB service
+# Note: This script only sets up ADB service on Android
+# Home Assistant will be installed in Ubuntu container (see setup_ubuntu.sh)
 
 set -e
 
@@ -33,6 +35,7 @@ if [ ! -d "/data/data/com.termux" ]; then
 fi
 
 print_status "Setting up Android TV Box ADB service..."
+print_status "Note: Home Assistant will be installed in Ubuntu container, not on Android"
 
 # Update package list
 print_status "Updating package list..."

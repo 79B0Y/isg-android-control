@@ -20,13 +20,12 @@ DEFAULT_ADB_PATH = "/usr/bin/adb"
 
 # Default apps configuration
 DEFAULT_APPS = {
-    "Home Assistant": "io.homeassistant.companion.android",
     "YouTube": "com.google.android.youtube",
     "Spotify": "com.spotify.music",
     "iSG": "com.linknlink.app.device.isg",
 }
 
-DEFAULT_VISIBLE_APPS = ["Home Assistant", "YouTube", "Spotify", "iSG"]
+DEFAULT_VISIBLE_APPS = ["YouTube", "Spotify", "iSG"]
 
 # Configuration schema
 CONFIG_SCHEMA = vol.Schema(

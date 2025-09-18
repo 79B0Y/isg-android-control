@@ -1,9 +1,9 @@
 # Android TV Box Home Assistant Integration Requirements
 # Install these dependencies in your Ubuntu container environment
+# Note: Home Assistant is already installed, so it's not included here
 
 # Core dependencies
 uiautomator2>=2.16.23
-homeassistant>=2023.1.0
 
 # Web server dependencies
 aiohttp>=3.8.0

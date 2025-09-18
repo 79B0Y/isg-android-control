@@ -1,7 +1,8 @@
 {
   "domain": "android_tv_box",
   "name": "Android TV Box",
-  "documentation": "https://github.com/your-repo/android-tv-box",
+  "documentation": "https://github.com/your-username/android-tv-box",
+  "issue_tracker": "https://github.com/your-username/android-tv-box/issues",
   "requirements": [
     "uiautomator2>=2.16.23",
     "aiohttp>=3.8.0",
@@ -11,5 +12,6 @@
   "dependencies": [],
   "codeowners": ["@your-username"],
   "version": "1.2.0",
-  "iot_class": "local_polling"
+  "iot_class": "local_polling",
+  "integration_type": "hub"
 }

@@ -43,7 +43,6 @@ Android TV Box集成现在包含一个功能完整的Web管理界面，运行在
 - **可见性**: 是否在Home Assistant选择器中显示
 
 #### 默认应用
-- **Home Assistant**: `io.homeassistant.companion.android`
 - **YouTube**: `com.google.android.youtube`
 - **Spotify**: `com.spotify.music`
 - **iSG**: `com.linknlink.app.device.isg`

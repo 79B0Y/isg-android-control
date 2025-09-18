@@ -2,6 +2,7 @@
 
 # Ubuntu Container Setup Script for Android TV Box Integration
 # Run this script in Ubuntu container (proot-distro)
+# Note: Home Assistant should already be installed in the container
 
 set -e
 
@@ -71,9 +72,10 @@ source ~/uiauto_env/bin/activate
 print_status "Upgrading pip..."
 pip install --upgrade pip
 
-# Install Python dependencies
+# Install Python dependencies (excluding Home Assistant as it's already installed)
 print_status "Installing Python dependencies..."
-pip install uiautomator2 homeassistant aiohttp aiohttp-cors paho-mqtt voluptuous
+print_status "Note: Home Assistant is already installed, skipping..."
+pip install uiautomator2 aiohttp aiohttp-cors paho-mqtt voluptuous
 
 # Test ADB connection
 print_status "Testing ADB connection to Android device..."
@@ -126,12 +128,10 @@ android_tv_box:
   ubuntu_venv_path: "~/uiauto_env"
   adb_path: "/usr/bin/adb"
   apps:
-    Home Assistant: io.homeassistant.companion.android
     YouTube: com.google.android.youtube
     Spotify: com.spotify.music
     iSG: com.linknlink.app.device.isg
   visible:
-    - Home Assistant
     - YouTube
     - Spotify
     - iSG

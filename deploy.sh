@@ -101,12 +101,10 @@ android_tv_box:
   ubuntu_venv_path: "~/uiauto_env"
   adb_path: "/usr/bin/adb"
   apps:
-    Home Assistant: io.homeassistant.companion.android
     YouTube: com.google.android.youtube
     Spotify: com.spotify.music
     iSG: com.linknlink.app.device.isg
   visible:
-    - Home Assistant
     - YouTube
     - Spotify
     - iSG
@@ -137,12 +135,10 @@ android_tv_box:
   ubuntu_venv_path: "~/uiauto_env"
   adb_path: "/usr/bin/adb"
   apps:
-    Home Assistant: io.homeassistant.companion.android
     YouTube: com.google.android.youtube
     Spotify: com.spotify.music
     iSG: com.linknlink.app.device.isg
   visible:
-    - Home Assistant
     - YouTube
     - Spotify
     - iSG

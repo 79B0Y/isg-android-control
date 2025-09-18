@@ -51,7 +51,6 @@ service: android_tv_box.restart_isg
 ```yaml
 android_tv_box:
   apps:
-    Home Assistant: io.homeassistant.companion.android
     YouTube: com.google.android.youtube
     Spotify: com.spotify.music
     iSG: com.linknlink.app.device.isg
@@ -60,7 +59,6 @@ android_tv_box:
   # 可选：限制在HA中显示的应用
   # 如果省略或为空，将显示apps中的所有应用
   visible:
-    - Home Assistant
     - YouTube
     - Spotify
     - iSG

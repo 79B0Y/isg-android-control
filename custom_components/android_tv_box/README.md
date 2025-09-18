@@ -2,6 +2,43 @@
 
 This integration allows you to control your Android TV Box through Home Assistant using ADB (Android Debug Bridge) commands. It provides comprehensive control over media playback, system settings, and device monitoring.
 
+## Installation
+
+### Method 1: HACS (Recommended)
+
+1. **Install HACS** (if not already installed)
+   - Follow the [HACS installation guide](https://hacs.xyz/docs/installation/installation/)
+
+2. **Add Custom Repository**
+   - Open HACS → Integrations
+   - Click the three dots menu → Custom repositories
+   - Add repository: `https://github.com/your-username/android-tv-box`
+   - Category: Integration
+
+3. **Install Integration**
+   - Search for "Android TV Box"
+   - Click Download
+   - Restart Home Assistant
+
+4. **Configure Integration**
+   - Go to Settings → Devices & Services
+   - Click Add Integration
+   - Search for "Android TV Box" and configure
+
+### Method 2: Manual Installation
+
+1. **Download the integration**
+   ```bash
+   cd /config/custom_components
+   git clone https://github.com/your-username/android-tv-box.git android_tv_box
+   ```
+
+2. **Restart Home Assistant**
+
+3. **Add the integration** through the UI as described above
+
+> 📖 **Detailed HACS Installation Guide**: See [HACS_INSTALLATION.md](../../HACS_INSTALLATION.md)
+
 ## Features
 
 ### Media Player Entity
@@ -157,7 +194,6 @@ Configure available applications for the select entity:
 android_tv_box:
   # ... other options ...
   apps:
-    Home Assistant: io.homeassistant.companion.android
     YouTube: com.google.android.youtube
     Spotify: com.spotify.music
     iSG: com.linknlink.app.device.isg
@@ -166,7 +202,6 @@ android_tv_box:
   # Optional: limit the dropdown options shown in HA
   # If omitted or empty, all keys from 'apps' will be shown.
   visible:
-    - Home Assistant
     - YouTube
     - Spotify
     - iSG
