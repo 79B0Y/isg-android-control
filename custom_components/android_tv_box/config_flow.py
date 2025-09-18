@@ -65,26 +65,29 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             try:
-                # Test connection
-                adb_service = ADBService(
-                    host=user_input["host"],
-                    port=user_input["port"],
-                    adb_path=user_input["adb_path"]
-                )
-                
-                if await adb_service.connect():
-                    await adb_service.disconnect()
-                    
-                    # Create entry
-                    return self.async_create_entry(
-                        title=user_input["name"],
-                        data=user_input,
+                # Test connection (optional - don't fail if ADB is not available)
+                try:
+                    adb_service = ADBService(
+                        host=user_input["host"],
+                        port=user_input["port"],
+                        adb_path=user_input["adb_path"]
                     )
-                else:
-                    errors["base"] = "cannot_connect"
                     
-            except ADBConnectionError:
-                errors["base"] = "cannot_connect"
+                    if await adb_service.connect():
+                        await adb_service.disconnect()
+                        _LOGGER.info("ADB connection test successful")
+                    else:
+                        _LOGGER.warning("ADB connection test failed, but continuing with setup")
+                        
+                except Exception as e:
+                    _LOGGER.warning(f"ADB connection test failed: {e}, but continuing with setup")
+                
+                # Create entry regardless of ADB connection test
+                return self.async_create_entry(
+                    title=user_input["name"],
+                    data=user_input,
+                )
+                    
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
