@@ -119,19 +119,49 @@ pkg install -y procps-ng  # 提供 top, ps 等命令
 
 ### ADB 连接失败
 
+如果看到错误 `adb: device '127.0.0.1:5555' not found`，这通常是因为 ADB 服务器缓存了错误的连接信息。
+
+#### 快速修复
+
+运行自动修复脚本：
+```bash
+./scripts/fix_adb_connection.sh
+```
+
+#### 手动修复
+
+1. **清理 ADB 缓存**：
+   ```bash
+   adb kill-server
+   adb start-server
+   ```
+
+2. **重新连接设备**：
+   ```bash
+   adb connect 192.168.188.221:5555
+   ```
+
+3. **验证连接**：
+   ```bash
+   adb devices
+   adb shell echo "Test successful"
+   ```
+
+#### 诊断工具
+
+运行诊断脚本检查所有组件：
+```bash
+python3 scripts/diagnose_adb.py
+```
+
+#### 其他检查
+
 1. **检查网络连接**：
    ```bash
    ping 192.168.188.221
    ```
 
-2. **检查 ADB 服务**：
-   ```bash
-   adb kill-server
-   adb start-server
-   adb connect 192.168.188.221:5555
-   ```
-
-3. **检查防火墙**：
+2. **检查防火墙**：
    - 确保 Android 设备防火墙允许 5555 端口
    - 确保路由器没有阻止设备间通信
 
