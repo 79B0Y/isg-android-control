@@ -190,7 +190,7 @@ android_tv_box:
 
 3. **Add the integration** through the UI
 
-> **Cleanup Note:** If you deployed earlier versions of this script, remove any directories named like `android_tv_box.backup.*` from `custom_components` manually—Home Assistant may still try to treat dotted backup folders as integrations.
+> **Cleanup Note:** Earlier versions of the deploy script left behind directories named like `android_tv_box.backup.*` inside `custom_components`. The current deploy script now relocates those dotted backups automatically; this reminder remains for anyone who copied files manually and may still have old folders lingering.
 
 ## 🔧 Prerequisites
 

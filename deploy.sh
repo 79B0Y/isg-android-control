@@ -68,6 +68,20 @@ if [ ! -d "$CUSTOM_COMPONENTS_DIR" ]; then
     mkdir -p "$CUSTOM_COMPONENTS_DIR"
 fi
 
+# Clean up legacy dotted backups that Home Assistant may still discover
+LEGACY_BACKUPS_DIR="$HA_CONFIG_DIR/android_tv_box_legacy_backups"
+mapfile -t LEGACY_BACKUPS < <(find "$CUSTOM_COMPONENTS_DIR" -maxdepth 1 -type d -name 'android_tv_box.backup.*' 2>/dev/null)
+if [ ${#LEGACY_BACKUPS[@]} -gt 0 ]; then
+    mkdir -p "$LEGACY_BACKUPS_DIR"
+    for legacy_backup in "${LEGACY_BACKUPS[@]}"; do
+        base_name="$(basename "$legacy_backup")"
+        mv "$legacy_backup" "$LEGACY_BACKUPS_DIR/$base_name"
+    done
+    print_warning "Moved ${#LEGACY_BACKUPS[@]} legacy dotted backups to $LEGACY_BACKUPS_DIR to prevent Home Assistant from reloading them"
+else
+    print_status "No legacy dotted backups found in custom_components"
+fi
+
 # Copy the integration
 print_status "Copying Android TV Box integration..."
 if [ -d "$CUSTOM_COMPONENTS_DIR/android_tv_box" ]; then
