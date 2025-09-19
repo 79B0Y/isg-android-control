@@ -11,7 +11,23 @@ from typing import Any, Dict, List, Optional
 from adb_shell.adb_device import AdbDeviceTcp
 from adb_shell.auth.keygen import keygen
 from adb_shell.auth.sign_pythonrsa import PythonRSASigner
-from adb_shell.exceptions import AdbAuthError, AdbConnectionError, AdbTimeoutError
+from adb_shell import exceptions as adb_exceptions
+
+AdbAuthError = getattr(
+    adb_exceptions,
+    "AdbAuthError",
+    getattr(adb_exceptions, "AuthenticationError", adb_exceptions.AdbError),
+)
+AdbConnectionError = getattr(
+    adb_exceptions,
+    "AdbConnectionError",
+    getattr(adb_exceptions, "ConnectionError", adb_exceptions.AdbError),
+)
+AdbTimeoutError = getattr(
+    adb_exceptions,
+    "AdbTimeoutError",
+    getattr(adb_exceptions, "TcpTimeoutException", adb_exceptions.AdbError),
+)
 
 _LOGGER = logging.getLogger(__name__)
 
