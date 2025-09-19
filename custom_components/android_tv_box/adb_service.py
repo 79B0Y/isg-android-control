@@ -13,20 +13,25 @@ from adb_shell.auth.keygen import keygen
 from adb_shell.auth.sign_pythonrsa import PythonRSASigner
 from adb_shell import exceptions as adb_exceptions
 
+BASE_ADB_ERROR = getattr(
+    adb_exceptions,
+    "AdbError",
+    getattr(adb_exceptions, "AdbException", Exception),
+)
 AdbAuthError = getattr(
     adb_exceptions,
     "AdbAuthError",
-    getattr(adb_exceptions, "AuthenticationError", adb_exceptions.AdbError),
+    getattr(adb_exceptions, "AuthenticationError", BASE_ADB_ERROR),
 )
 AdbConnectionError = getattr(
     adb_exceptions,
     "AdbConnectionError",
-    getattr(adb_exceptions, "ConnectionError", adb_exceptions.AdbError),
+    getattr(adb_exceptions, "ConnectionError", BASE_ADB_ERROR),
 )
 AdbTimeoutError = getattr(
     adb_exceptions,
     "AdbTimeoutError",
-    getattr(adb_exceptions, "TcpTimeoutException", adb_exceptions.AdbError),
+    getattr(adb_exceptions, "TcpTimeoutException", BASE_ADB_ERROR),
 )
 
 _LOGGER = logging.getLogger(__name__)
