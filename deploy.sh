@@ -72,7 +72,8 @@ fi
 print_status "Copying Android TV Box integration..."
 if [ -d "$CUSTOM_COMPONENTS_DIR/android_tv_box" ]; then
     print_warning "Integration already exists. Backing up..."
-    mv "$CUSTOM_COMPONENTS_DIR/android_tv_box" "$CUSTOM_COMPONENTS_DIR/android_tv_box.backup.$(date +%Y%m%d_%H%M%S)"
+    # Keep backups out of Home Assistant's module discovery by avoiding dotted names
+    mv "$CUSTOM_COMPONENTS_DIR/android_tv_box" "$CUSTOM_COMPONENTS_DIR/android_tv_box_backup_$(date +%Y%m%d_%H%M%S)"
 fi
 
 cp -r "custom_components/android_tv_box" "$CUSTOM_COMPONENTS_DIR/"
