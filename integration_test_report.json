@@ -1,0 +1,122 @@
+{
+  "timestamp": "2025-09-19 20:12:13",
+  "device": "192.168.188.221:5555",
+  "summary": {
+    "total": 19,
+    "passed": 19,
+    "failed": 0,
+    "errors": 0,
+    "success_rate": 100.0
+  },
+  "detailed_results": {
+    "media_player": [
+      [
+        "Get Volume",
+        "PASS",
+        "[V] will control stream=3 (STREAM_MUSIC)\n[V] will get volume\n[V] Connecting to AudioService\n[V] volume is 6 in range [0..15]"
+      ],
+      [
+        "Volume Controls",
+        "PASS",
+        "Volume up/down commands sent"
+      ],
+      [
+        "Media Controls",
+        "PASS",
+        "Play/pause commands sent"
+      ],
+      [
+        "Power Status",
+        "PASS",
+        "Device is awake"
+      ]
+    ],
+    "switch": [
+      [
+        "WiFi Status",
+        "PASS",
+        "WiFi status: 1"
+      ],
+      [
+        "Power Status Check",
+        "PASS",
+        "mWakefulness=Awake\n  mWakefulnessChanging=false"
+      ]
+    ],
+    "camera": [
+      [
+        "Screenshot Creation",
+        "PASS",
+        "Screenshot created: /sdcard/isgbackup/screenshot/test_screen_20250919_201149.png"
+      ],
+      [
+        "Screenshot Cleanup",
+        "PASS",
+        "Screenshot cleaned up"
+      ]
+    ],
+    "sensor": [
+      [
+        "Brightness Sensor",
+        "PASS",
+        "Brightness: 112"
+      ],
+      [
+        "WiFi Info Sensor",
+        "PASS",
+        "mWifiInfo SSID: \"JJJJhome_WiFi_5G\", BSSID: 94:05:b6:71:66:2a, MAC: fe:fd:fc:3e:8f:6f, IP: /192.168.188.221, Security type: 2, Supplicant state: COMPLETED, Wi-Fi standard: 5, RSSI: -36, Link speed: 200Mbps, Tx Link speed: 200Mbps, Max Supported Tx Link speed: 200Mbps, Rx Link speed: 200Mbps, Max Supported Rx Link speed: 200Mbps, Frequency: 5240MHz, Net ID: 0, Metered hint: false, score: 60, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>\"JJJJhome_WiFi_5G\"wpa2-pskMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>"
+      ],
+      [
+        "Current App Sensor",
+        "PASS",
+        "Current app detected"
+      ],
+      [
+        "Performance Sensor",
+        "PASS",
+        "Performance data retrieved"
+      ]
+    ],
+    "remote": [
+      [
+        "Navigation Keys",
+        "PASS",
+        "All navigation keys sent successfully"
+      ],
+      [
+        "Media Keys",
+        "PASS",
+        "All media keys sent successfully"
+      ]
+    ],
+    "select": [
+      [
+        "App Launch",
+        "PASS",
+        "iSG app launched successfully"
+      ],
+      [
+        "Current App Detection",
+        "PASS",
+        "Current app detected"
+      ]
+    ],
+    "binary_sensor": [
+      [
+        "Connection Status",
+        "PASS",
+        "ADB connection active"
+      ],
+      [
+        "iSG Monitoring",
+        "PASS",
+        "iSG process detected"
+      ],
+      [
+        "CPU Monitoring",
+        "PASS",
+        "CPU data retrieved"
+      ]
+    ]
+  }
+}

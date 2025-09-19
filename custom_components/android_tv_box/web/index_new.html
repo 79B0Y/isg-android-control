@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Android TV Box Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            color: #4a5568;
+            font-size: 2rem;
+            font-weight: 600;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status.online {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .status.offline {
+            background: #f56565;
+            color: white;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .tab-button {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .tab-button:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: translateY(-2px);
+        }
+        
+        .tab-button.active {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .card h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        
+        .label {
+            font-weight: 500;
+            color: #4a5568;
+        }
+        
+        .value {
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .value.on {
+            color: #48bb78;
+        }
+        
+        .value.off {
+            color: #f56565;
+        }
+        
+        .value.running {
+            color: #48bb78;
+        }
+        
+        .value.stopped {
+            color: #f56565;
+        }
+        
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #ed8936;
+            color: white;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #4a5568;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+        }
+        
+        .toast.success {
+            background: #48bb78;
+        }
+        
+        .toast.error {
+            background: #f56565;
+        }
+        
+        .toast.warning {
+            background: #ed8936;
+        }
+        
+        .toast.info {
+            background: #4299e1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-tv"></i> Android TV Box Management</h1>
+            <div class="status-indicator">
+                <span id="connection-status" class="status offline">Offline</span>
+            </div>
+        </header>
+
+        <nav class="nav-tabs">
+            <button class="tab-button active" data-tab="dashboard">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+            </button>
+            <button class="tab-button" data-tab="apps">
+                <i class="fas fa-mobile-alt"></i> Apps
+            </button>
+            <button class="tab-button" data-tab="config">
+                <i class="fas fa-cog"></i> Configuration
+            </button>
+            <button class="tab-button" data-tab="mqtt">
+                <i class="fas fa-broadcast-tower"></i> MQTT
+            </button>
+        </nav>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="dashboard-grid">
+                <div class="card">
+                    <h3><i class="fas fa-power-off"></i> Device Status</h3>
+                    <div class="status-item">
+                        <span class="label">Power:</span>
+                        <span id="device-power" class="value">Unknown</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">WiFi:</span>
+                        <span id="wifi-status" class="value">Unknown</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Current App:</span>
+                        <span id="current-app" class="value">Unknown</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3><i class="fas fa-shield-alt"></i> iSG Status</h3>
+                    <div class="status-item">
+                        <span class="label">iSG Running:</span>
+                        <span id="isg-status" class="value">Unknown</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Last Check:</span>
+                        <span id="last-check" class="value">Never</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3><i class="fas fa-tools"></i> Quick Actions</h3>
+                    <div class="actions">
+                        <button id="refresh-status" class="btn btn-primary">
+                            <i class="fas fa-sync-alt"></i> Refresh Status
+                        </button>
+                        <button id="wake-isg" class="btn btn-success">
+                            <i class="fas fa-play"></i> Wake iSG
+                        </button>
+                        <button id="restart-isg" class="btn btn-warning">
+                            <i class="fas fa-redo"></i> Restart iSG
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Apps Tab -->
+        <div id="apps" class="tab-content">
+            <div class="card">
+                <h3><i class="fas fa-mobile-alt"></i> Application Management</h3>
+                <p>App management functionality will be implemented here.</p>
+            </div>
+        </div>
+
+        <!-- Configuration Tab -->
+        <div id="config" class="tab-content">
+            <div class="card">
+                <h3><i class="fas fa-cog"></i> Configuration</h3>
+                <p>Configuration management functionality will be implemented here.</p>
+            </div>
+        </div>
+
+        <!-- MQTT Tab -->
+        <div id="mqtt" class="tab-content">
+            <div class="card">
+                <h3><i class="fas fa-broadcast-tower"></i> MQTT Settings</h3>
+                <p>MQTT configuration functionality will be implemented here.</p>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">
+            <i class="fas fa-spinner fa-spin"></i> Loading...
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+    <script>
+        class AndroidTVBoxManager {
+            constructor() {
+                console.log('AndroidTVBoxManager initializing...');
+                this.currentTab = 'dashboard';
+                this.statusInterval = null;
+                this.init();
+            }
+
+            init() {
+                console.log('Setting up event listeners...');
+                this.setupEventListeners();
+                console.log('Starting status updates...');
+                this.startStatusUpdates();
+                console.log('AndroidTVBoxManager initialization complete');
+            }
+
+            setupEventListeners() {
+                // Tab navigation
+                document.querySelectorAll('.tab-button').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const tab = e.target.dataset.tab || e.target.closest('[data-tab]')?.dataset.tab;
+                        if (tab) {
+                            this.switchTab(tab);
+                        }
+                    });
+                });
+
+                // Dashboard actions
+                const refreshBtn = document.getElementById('refresh-status');
+                if (refreshBtn) {
+                    refreshBtn.addEventListener('click', () => {
+                        console.log('Refresh button clicked');
+                        this.refreshStatus();
+                    });
+                }
+
+                const wakeBtn = document.getElementById('wake-isg');
+                if (wakeBtn) {
+                    wakeBtn.addEventListener('click', () => {
+                        console.log('Wake iSG button clicked');
+                        this.wakeISG();
+                    });
+                }
+
+                const restartBtn = document.getElementById('restart-isg');
+                if (restartBtn) {
+                    restartBtn.addEventListener('click', () => {
+                        console.log('Restart iSG button clicked');
+                        this.restartISG();
+                    });
+                }
+            }
+
+            switchTab(tabName) {
+                console.log('Switching to tab:', tabName);
+                
+                // Update tab buttons
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+                
+                // Update tab content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(tabName).classList.add('active');
+                
+                this.currentTab = tabName;
+            }
+
+            async refreshStatus() {
+                console.log('refreshStatus() called');
+                try {
+                    this.showLoading();
+                    console.log('Fetching /api/status...');
+                    
+                    const response = await fetch('/api/status');
+                    console.log('Response received:', response.status, response.statusText);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    console.log('Response data:', data);
+                    
+                    if (data.success) {
+                        console.log('Updating status display with data:', data.data);
+                        this.updateStatusDisplay(data.data);
+                        this.showToast('Status refreshed successfully!', 'success');
+                    } else {
+                        console.error('API error:', data.error);
+                        this.showToast('Error refreshing status: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    console.error('Refresh status error:', error);
+                    this.showToast('Error refreshing status: ' + error.message, 'error');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            updateStatusDisplay(status) {
+                console.log('Updating status display with:', status);
+                
+                // Update connection status
+                const connectionStatus = document.getElementById('connection-status');
+                console.log('connection-status element:', connectionStatus);
+                if (connectionStatus) {
+                    if (status.adb_connected) {
+                        connectionStatus.textContent = 'Online';
+                        connectionStatus.className = 'status online';
+                        console.log('Set connection status to Online');
+                    } else {
+                        connectionStatus.textContent = 'Offline';
+                        connectionStatus.className = 'status offline';
+                        console.log('Set connection status to Offline');
+                    }
+                } else {
+                    console.error('connection-status element not found!');
+                }
+
+                // Update device status
+                const devicePower = document.getElementById('device-power');
+                console.log('device-power element:', devicePower);
+                if (devicePower) {
+                    devicePower.textContent = status.device_powered_on ? 'On' : 'Off';
+                    devicePower.className = `value ${status.device_powered_on ? 'on' : 'off'}`;
+                    console.log('Set device power to:', status.device_powered_on ? 'On' : 'Off');
+                } else {
+                    console.error('device-power element not found!');
+                }
+                
+                const wifiStatus = document.getElementById('wifi-status');
+                console.log('wifi-status element:', wifiStatus);
+                if (wifiStatus) {
+                    wifiStatus.textContent = status.wifi_enabled ? 'Enabled' : 'Disabled';
+                    wifiStatus.className = `value ${status.wifi_enabled ? 'on' : 'off'}`;
+                    console.log('Set WiFi status to:', status.wifi_enabled ? 'Enabled' : 'Disabled');
+                } else {
+                    console.error('wifi-status element not found!');
+                }
+                
+                const currentApp = document.getElementById('current-app');
+                console.log('current-app element:', currentApp);
+                if (currentApp) {
+                    currentApp.textContent = status.current_app || 'Unknown';
+                    console.log('Set current app to:', status.current_app || 'Unknown');
+                } else {
+                    console.error('current-app element not found!');
+                }
+                
+                const isgStatus = document.getElementById('isg-status');
+                console.log('isg-status element:', isgStatus);
+                if (isgStatus) {
+                    isgStatus.textContent = status.isg_running ? 'Running' : 'Stopped';
+                    isgStatus.className = `value ${status.isg_running ? 'running' : 'stopped'}`;
+                    console.log('Set iSG status to:', status.isg_running ? 'Running' : 'Stopped');
+                } else {
+                    console.error('isg-status element not found!');
+                }
+                
+                const lastCheck = document.getElementById('last-check');
+                console.log('last-check element:', lastCheck);
+                if (lastCheck) {
+                    lastCheck.textContent = new Date(status.timestamp).toLocaleString();
+                    console.log('Set last check to:', new Date(status.timestamp).toLocaleString());
+                } else {
+                    console.error('last-check element not found!');
+                }
+            }
+
+            async wakeISG() {
+                console.log('Wake iSG button clicked');
+                try {
+                    this.showLoading();
+                    const response = await fetch('/api/wake-isg', { method: 'POST' });
+                    
+                    if (response.status === 404) {
+                        this.showToast('iSG wake function not yet implemented', 'warning');
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showToast('iSG wake up initiated!', 'success');
+                        setTimeout(() => this.refreshStatus(), 2000);
+                    } else {
+                        this.showToast('Error waking up iSG: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    console.error('Wake iSG error:', error);
+                    this.showToast('Error waking up iSG: ' + error.message, 'error');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            async restartISG() {
+                console.log('Restart iSG button clicked');
+                try {
+                    this.showLoading();
+                    const response = await fetch('/api/restart-isg', { method: 'POST' });
+                    
+                    if (response.status === 404) {
+                        this.showToast('iSG restart function not yet implemented', 'warning');
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showToast('iSG restart initiated!', 'success');
+                        setTimeout(() => this.refreshStatus(), 3000);
+                    } else {
+                        this.showToast('Error restarting iSG: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    console.error('Restart iSG error:', error);
+                    this.showToast('Error restarting iSG: ' + error.message, 'error');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            startStatusUpdates() {
+                // Update status every 30 seconds
+                this.statusInterval = setInterval(() => {
+                    console.log('Auto-refreshing status...');
+                    this.refreshStatus();
+                }, 30000);
+                
+                // Initial status update
+                console.log('Performing initial status update...');
+                this.refreshStatus();
+            }
+
+            showLoading() {
+                const loading = document.getElementById('loading');
+                if (loading) {
+                    loading.classList.add('show');
+                }
+            }
+
+            hideLoading() {
+                const loading = document.getElementById('loading');
+                if (loading) {
+                    loading.classList.remove('show');
+                }
+            }
+
+            showToast(message, type = 'info') {
+                console.log(`Toast: ${type} - ${message}`);
+                
+                // Remove existing toast
+                const existingToast = document.querySelector('.toast');
+                if (existingToast) {
+                    existingToast.remove();
+                }
+                
+                // Create new toast
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                
+                // Show toast
+                setTimeout(() => toast.classList.add('show'), 100);
+                
+                // Hide toast after 3 seconds
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
+        }
+
+        // Initialize the manager when the page loads
+        let manager;
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, initializing AndroidTVBoxManager...');
+            manager = new AndroidTVBoxManager();
+        });
+    </script>
+</body>
+</html>
+

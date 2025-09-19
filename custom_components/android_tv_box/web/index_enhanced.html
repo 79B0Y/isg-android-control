@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Android TV Box Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            color: #4a5568;
+            font-size: 2rem;
+            margin: 0;
+        }
+        
+        .status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+        
+        .status.online {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .status.offline {
+            background: #f56565;
+            color: white;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .tab-button {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-button:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: translateY(-2px);
+        }
+        
+        .tab-button.active {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .card h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        
+        .label {
+            font-weight: 500;
+            color: #4a5568;
+        }
+        
+        .value {
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .value.on {
+            color: #48bb78;
+        }
+        
+        .value.off {
+            color: #f56565;
+        }
+        
+        .value.running {
+            color: #48bb78;
+        }
+        
+        .value.stopped {
+            color: #f56565;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #ed8936;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+        
+        .btn-info {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .btn-small {
+            padding: 8px 12px;
+            font-size: 0.9rem;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #4a5568;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+        }
+        
+        .toast.success {
+            background: #48bb78;
+        }
+        
+        .toast.error {
+            background: #f56565;
+        }
+        
+        .toast.warning {
+            background: #ed8936;
+        }
+        
+        .toast.info {
+            background: #4299e1;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #4a5568;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .apps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .app-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .app-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .app-card h4 {
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+        
+        .app-card p {
+            color: #718096;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        
+        .app-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-header h2 {
+            color: #4a5568;
+            font-size: 1.5rem;
+        }
+        
+        .close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #718096;
+        }
+        
+        .close:hover {
+            color: #4a5568;
+        }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #4299e1;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .config-sections {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .config-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .config-section h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>📱 Android TV Box Management</h1>
+            <div>
+                <span id="connection-status" class="status offline">Offline</span>
+            </div>
+        </header>
+
+        <nav class="nav-tabs">
+            <button class="tab-button active" onclick="switchTab('dashboard')">
+                📊 Dashboard
+            </button>
+            <button class="tab-button" onclick="switchTab('apps')">
+                📱 Apps
+            </button>
+            <button class="tab-button" onclick="switchTab('config')">
+                ⚙️ Configuration
+            </button>
+            <button class="tab-button" onclick="switchTab('mqtt')">
+                📡 MQTT
+            </button>
+        </nav>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="dashboard-grid">
+                <div class="card">
+                    <h3>🔌 Device Status</h3>
+                    <div class="status-item">
+                        <span class="label">Power:</span>
+                        <span id="device-power" class="value">Unknown</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">WiFi:</span>
+                        <span id="wifi-status" class="value">Unknown</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Current App:</span>
+                        <span id="current-app" class="value">Unknown</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🛡️ iSG Status</h3>
+                    <div class="status-item">
+                        <span class="label">iSG Running:</span>
+                        <span id="isg-status" class="value">Unknown</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Last Check:</span>
+                        <span id="last-check" class="value">Never</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>⚡ Quick Actions</h3>
+                    <div class="actions">
+                        <button class="btn btn-primary" onclick="refreshStatus()">
+                            🔄 Refresh Status
+                        </button>
+                        <button class="btn btn-success" onclick="wakeISG()">
+                            ▶️ Wake iSG
+                        </button>
+                        <button class="btn btn-warning" onclick="restartISG()">
+                            🔄 Restart iSG
+                        </button>
+                        <button class="btn btn-info" onclick="connectADB()">
+                            🔌 Connect ADB
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Apps Tab -->
+        <div id="apps" class="tab-content">
+            <div class="card">
+                <h3>
+                    📱 Application Management
+                    <button class="btn btn-primary btn-small" onclick="showAddAppModal()">
+                        ➕ Add App
+                    </button>
+                </h3>
+                <div id="apps-grid" class="apps-grid">
+                    <!-- Apps will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Tab -->
+        <div id="config" class="tab-content">
+            <div class="card">
+                <h3>
+                    ⚙️ Configuration
+                    <button class="btn btn-success btn-small" onclick="saveConfiguration()">
+                        💾 Save Configuration
+                    </button>
+                </h3>
+                <div class="config-sections">
+                    <div class="config-section">
+                        <h3>🔌 ADB Connection</h3>
+                        <div class="form-group">
+                            <label for="adb-host">Host IP:</label>
+                            <input type="text" id="adb-host" placeholder="192.168.1.100">
+                        </div>
+                        <div class="form-group">
+                            <label for="adb-port">Port:</label>
+                            <input type="number" id="adb-port" placeholder="5555">
+                        </div>
+                        <div class="form-group">
+                            <label for="device-name">Device Name:</label>
+                            <input type="text" id="device-name" placeholder="Android TV Box">
+                        </div>
+                        <button class="btn btn-primary" onclick="testAdbConnection()">
+                            🔌 Test Connection
+                        </button>
+                    </div>
+
+                    <div class="config-section">
+                        <h3>📸 Screenshot Settings</h3>
+                        <div class="form-group">
+                            <label for="screenshot-path">Screenshot Path:</label>
+                            <input type="text" id="screenshot-path" placeholder="/sdcard/screenshots/">
+                        </div>
+                        <div class="form-group">
+                            <label for="screenshot-keep-count">Keep Count:</label>
+                            <input type="number" id="screenshot-keep-count" placeholder="3">
+                        </div>
+                        <div class="form-group">
+                            <label for="screenshot-interval">Interval (seconds):</label>
+                            <input type="number" id="screenshot-interval" placeholder="3">
+                        </div>
+                    </div>
+
+                    <div class="config-section">
+                        <h3>📊 Performance Settings</h3>
+                        <div class="form-group">
+                            <label for="performance-check-interval">Check Interval (ms):</label>
+                            <input type="number" id="performance-check-interval" placeholder="500">
+                        </div>
+                        <div class="form-group">
+                            <label for="cpu-threshold">CPU Threshold (%):</label>
+                            <input type="number" id="cpu-threshold" placeholder="50">
+                        </div>
+                        <div class="form-group">
+                            <label for="termux-mode">Termux Mode:</label>
+                            <label class="switch">
+                                <input type="checkbox" id="termux-mode">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MQTT Tab -->
+        <div id="mqtt" class="tab-content">
+            <div class="card">
+                <h3>📡 MQTT Settings</h3>
+                <p>MQTT configuration functionality will be implemented here.</p>
+                <button class="btn btn-primary" onclick="testMQTT()">Test MQTT</button>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">
+            ⏳ Loading...
+        </div>
+    </div>
+
+    <!-- Add App Modal -->
+    <div id="add-app-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>➕ Add Application</h2>
+                <button class="close" onclick="closeModal('add-app-modal')">&times;</button>
+            </div>
+            <form id="add-app-form">
+                <div class="form-group">
+                    <label for="app-name">Application Name:</label>
+                    <input type="text" id="app-name" placeholder="e.g., YouTube" required>
+                </div>
+                <div class="form-group">
+                    <label for="app-package">Package Name:</label>
+                    <input type="text" id="app-package" placeholder="e.g., com.google.android.youtube.tv" required>
+                </div>
+                <div class="form-group">
+                    <label for="app-visible">Visible in Selector:</label>
+                    <label class="switch">
+                        <input type="checkbox" id="app-visible" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                    <button type="button" class="btn btn-danger" onclick="closeModal('add-app-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-success">Add App</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit App Modal -->
+    <div id="edit-app-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>✏️ Edit Application</h2>
+                <button class="close" onclick="closeModal('edit-app-modal')">&times;</button>
+            </div>
+            <form id="edit-app-form">
+                <input type="hidden" id="edit-app-id">
+                <div class="form-group">
+                    <label for="edit-app-name">Application Name:</label>
+                    <input type="text" id="edit-app-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-app-package">Package Name:</label>
+                    <input type="text" id="edit-app-package" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-app-visible">Visible in Selector:</label>
+                    <label class="switch">
+                        <input type="checkbox" id="edit-app-visible">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                    <button type="button" class="btn btn-danger" onclick="closeModal('edit-app-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-success">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentTab = 'dashboard';
+        let apps = [];
+        let config = {};
+        
+        function switchTab(tabName) {
+            console.log('Switching to tab:', tabName);
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+            
+            currentTab = tabName;
+            
+            // Load data when switching to specific tabs
+            if (tabName === 'apps') {
+                loadApps();
+            } else if (tabName === 'config') {
+                loadConfiguration();
+            }
+        }
+        
+        function showLoading() {
+            document.getElementById('loading').classList.add('show');
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('show');
+        }
+        
+        function showToast(message, type = 'info') {
+            console.log(`Toast: ${type} - ${message}`);
+            
+            // Remove existing toast
+            const existingToast = document.querySelector('.toast');
+            if (existingToast) {
+                existingToast.remove();
+            }
+            
+            // Create new toast
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            // Show toast
+            setTimeout(() => toast.classList.add('show'), 100);
+            
+            // Hide toast after 3 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        async function refreshStatus() {
+            console.log('Refreshing status...');
+            try {
+                showLoading();
+                
+                const response = await fetch('/api/status');
+                console.log('Response:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Data:', data);
+                
+                if (data.success) {
+                    updateStatusDisplay(data.data);
+                    showToast('Status refreshed successfully!', 'success');
+                } else {
+                    showToast('Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function updateStatusDisplay(status) {
+            console.log('Updating display:', status);
+            
+            // Update connection status
+            const connectionStatus = document.getElementById('connection-status');
+            if (connectionStatus) {
+                if (status.adb_connected) {
+                    connectionStatus.textContent = 'Online';
+                    connectionStatus.className = 'status online';
+                } else {
+                    connectionStatus.textContent = 'Offline';
+                    connectionStatus.className = 'status offline';
+                }
+            }
+            
+            // Update device status
+            const devicePower = document.getElementById('device-power');
+            if (devicePower) {
+                devicePower.textContent = status.device_powered_on ? 'On' : 'Off';
+                devicePower.className = `value ${status.device_powered_on ? 'on' : 'off'}`;
+            }
+            
+            const wifiStatus = document.getElementById('wifi-status');
+            if (wifiStatus) {
+                wifiStatus.textContent = status.wifi_enabled ? 'Enabled' : 'Disabled';
+                wifiStatus.className = `value ${status.wifi_enabled ? 'on' : 'off'}`;
+            }
+            
+            const currentApp = document.getElementById('current-app');
+            if (currentApp) {
+                currentApp.textContent = status.current_app || 'Unknown';
+            }
+            
+            const isgStatus = document.getElementById('isg-status');
+            if (isgStatus) {
+                isgStatus.textContent = status.isg_running ? 'Running' : 'Stopped';
+                isgStatus.className = `value ${status.isg_running ? 'running' : 'stopped'}`;
+            }
+            
+            const lastCheck = document.getElementById('last-check');
+            if (lastCheck) {
+                lastCheck.textContent = new Date(status.timestamp).toLocaleString();
+            }
+        }
+        
+        async function loadApps() {
+            console.log('Loading apps...');
+            try {
+                showLoading();
+                const response = await fetch('/api/apps');
+                const data = await response.json();
+                
+                if (data.success) {
+                    apps = data.data;
+                    renderApps();
+                    showToast('Apps loaded successfully!', 'success');
+                } else {
+                    showToast('Error loading apps: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function renderApps() {
+            const appsGrid = document.getElementById('apps-grid');
+            if (!appsGrid) return;
+            
+            appsGrid.innerHTML = '';
+            
+            apps.forEach(app => {
+                const appCard = document.createElement('div');
+                appCard.className = 'app-card';
+                appCard.innerHTML = `
+                    <h4>${app.name}</h4>
+                    <p><strong>Package:</strong> ${app.package}</p>
+                    <p><strong>Visible:</strong> ${app.visible ? 'Yes' : 'No'}</p>
+                    <div class="app-actions">
+                        <button class="btn btn-primary btn-small" onclick="launchApp('${app.package}')">
+                            ▶️ Launch
+                        </button>
+                        <button class="btn btn-warning btn-small" onclick="editApp('${app.id}')">
+                            ✏️ Edit
+                        </button>
+                        <button class="btn btn-danger btn-small" onclick="deleteApp('${app.id}')">
+                            🗑️ Delete
+                        </button>
+                    </div>
+                `;
+                appsGrid.appendChild(appCard);
+            });
+        }
+        
+        function showAddAppModal() {
+            document.getElementById('add-app-modal').classList.add('show');
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+        
+        async function addApp() {
+            const name = document.getElementById('app-name').value;
+            const package = document.getElementById('app-package').value;
+            const visible = document.getElementById('app-visible').checked;
+            
+            console.log('Adding app:', { name, package, visible });
+            
+            try {
+                showLoading();
+                const response = await fetch('/api/apps', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name, package, visible })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('App added successfully!', 'success');
+                    closeModal('add-app-modal');
+                    document.getElementById('add-app-form').reset();
+                    loadApps();
+                } else {
+                    showToast('Error adding app: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function editApp(appId) {
+            const app = apps.find(a => a.id === appId);
+            if (!app) return;
+            
+            document.getElementById('edit-app-id').value = app.id;
+            document.getElementById('edit-app-name').value = app.name;
+            document.getElementById('edit-app-package').value = app.package;
+            document.getElementById('edit-app-visible').checked = app.visible;
+            
+            document.getElementById('edit-app-modal').classList.add('show');
+        }
+        
+        async function updateApp() {
+            const id = document.getElementById('edit-app-id').value;
+            const name = document.getElementById('edit-app-name').value;
+            const package = document.getElementById('edit-app-package').value;
+            const visible = document.getElementById('edit-app-visible').checked;
+            
+            console.log('Updating app:', { id, name, package, visible });
+            
+            try {
+                showLoading();
+                const response = await fetch(`/api/apps/${encodeURIComponent(id)}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name, package, visible })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('App updated successfully!', 'success');
+                    closeModal('edit-app-modal');
+                    loadApps();
+                } else {
+                    showToast('Error updating app: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function deleteApp(appId) {
+            if (!confirm('Are you sure you want to delete this app?')) {
+                return;
+            }
+            
+            console.log('Deleting app:', appId);
+            
+            try {
+                showLoading();
+                const response = await fetch(`/api/apps/${encodeURIComponent(appId)}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('App deleted successfully!', 'success');
+                    loadApps();
+                } else {
+                    showToast('Error deleting app: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function launchApp(packageName) {
+            console.log('Launching app:', packageName);
+            try {
+                showLoading();
+                const response = await fetch('/api/launch-app', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ package_name: packageName })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('App launched successfully!', 'success');
+                    setTimeout(() => refreshStatus(), 2000);
+                } else {
+                    showToast('Error launching app: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function loadConfiguration() {
+            console.log('Loading configuration...');
+            try {
+                showLoading();
+                const response = await fetch('/api/config');
+                const data = await response.json();
+                
+                if (data.success) {
+                    config = data.data;
+                    populateConfigForm();
+                    showToast('Configuration loaded successfully!', 'success');
+                } else {
+                    showToast('Error loading config: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function populateConfigForm() {
+            // ADB settings
+            document.getElementById('adb-host').value = config.host || '';
+            document.getElementById('adb-port').value = config.port || '';
+            document.getElementById('device-name').value = config.device_name || '';
+            
+            // Screenshot settings
+            document.getElementById('screenshot-path').value = config.screenshot_path || '';
+            document.getElementById('screenshot-keep-count').value = config.screenshot_keep_count || '';
+            document.getElementById('screenshot-interval').value = config.screenshot_interval || '';
+            
+            // Performance settings
+            document.getElementById('performance-check-interval').value = config.performance_check_interval || '';
+            document.getElementById('cpu-threshold').value = config.cpu_threshold || '';
+            document.getElementById('termux-mode').checked = config.termux_mode || false;
+        }
+        
+        async function saveConfiguration() {
+            console.log('Saving configuration...');
+            
+            const newConfig = {
+                host: document.getElementById('adb-host').value,
+                port: parseInt(document.getElementById('adb-port').value),
+                device_name: document.getElementById('device-name').value,
+                screenshot_path: document.getElementById('screenshot-path').value,
+                screenshot_keep_count: parseInt(document.getElementById('screenshot-keep-count').value),
+                screenshot_interval: parseInt(document.getElementById('screenshot-interval').value),
+                performance_check_interval: parseInt(document.getElementById('performance-check-interval').value),
+                cpu_threshold: parseInt(document.getElementById('cpu-threshold').value),
+                termux_mode: document.getElementById('termux-mode').checked
+            };
+            
+            try {
+                showLoading();
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(newConfig)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('Configuration saved successfully!', 'success');
+                    config = { ...config, ...newConfig };
+                } else {
+                    showToast('Error saving config: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function testAdbConnection() {
+            console.log('Testing ADB connection...');
+            try {
+                showLoading();
+                const response = await fetch('/api/test-connection', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        host: document.getElementById('adb-host').value,
+                        port: parseInt(document.getElementById('adb-port').value)
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('ADB connection test successful!', 'success');
+                } else {
+                    showToast('ADB connection test failed: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function wakeISG() {
+            console.log('Waking iSG...');
+            try {
+                showLoading();
+                const response = await fetch('/api/wake-isg', { method: 'POST' });
+                
+                if (response.status === 404) {
+                    showToast('iSG wake function not yet implemented', 'warning');
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('iSG wake up initiated!', 'success');
+                    setTimeout(() => refreshStatus(), 2000);
+                } else {
+                    showToast('Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function restartISG() {
+            console.log('Restarting iSG...');
+            try {
+                showLoading();
+                const response = await fetch('/api/restart-isg', { method: 'POST' });
+                
+                if (response.status === 404) {
+                    showToast('iSG restart function not yet implemented', 'warning');
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('iSG restart initiated!', 'success');
+                    setTimeout(() => refreshStatus(), 3000);
+                } else {
+                    showToast('Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function connectADB() {
+            console.log('Connect ADB button clicked');
+            try {
+                showLoading();
+                
+                // Get current configuration for host and port
+                const host = document.getElementById('adb-host').value || '192.168.188.221';
+                const port = document.getElementById('adb-port').value || 5555;
+                
+                const response = await fetch('/api/connect-adb', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ host, port })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('ADB connected successfully!', 'success');
+                    // Refresh status after connection
+                    setTimeout(() => refreshStatus(), 1000);
+                } else {
+                    showToast('ADB connection failed: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Connect ADB error:', error);
+                showToast('Error connecting to ADB: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function testMQTT() {
+            console.log('Testing MQTT...');
+            showToast('MQTT test function not yet implemented', 'warning');
+        }
+        
+        // Event listeners
+        document.getElementById('add-app-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            addApp();
+        });
+        
+        document.getElementById('edit-app-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            updateApp();
+        });
+        
+        // Auto-refresh status every 30 seconds
+        setInterval(() => {
+            console.log('Auto-refreshing status...');
+            refreshStatus();
+        }, 30000);
+        
+        // Initial status update
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Page loaded, refreshing status...');
+            setTimeout(() => refreshStatus(), 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Android TV Box API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Android TV Box API Test</h1>
+    
+    <div>
+        <button onclick="testStatusAPI()">Test Status API</button>
+        <button onclick="testConfigAPI()">Test Config API</button>
+        <button onclick="testAllAPIs()">Test All APIs</button>
+    </div>
+    
+    <div id="results"></div>
+    
+    <script>
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            results.appendChild(div);
+            console.log(message);
+        }
+        
+        async function testStatusAPI() {
+            log('Testing Status API...', 'info');
+            try {
+                const response = await fetch('/api/status');
+                log(`Status API Response: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                
+                const data = await response.json();
+                log(`Status Data: <pre>${JSON.stringify(data, null, 2)}</pre>`, 'info');
+                
+                if (data.success) {
+                    log('✅ Status API working correctly!', 'success');
+                    log(`Device Status: Power=${data.data.device_powered_on ? 'On' : 'Off'}, WiFi=${data.data.wifi_enabled ? 'Enabled' : 'Disabled'}, App=${data.data.current_app}`, 'success');
+                } else {
+                    log(`❌ Status API error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Status API failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testConfigAPI() {
+            log('Testing Config API...', 'info');
+            try {
+                const response = await fetch('/api/config');
+                log(`Config API Response: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                
+                const data = await response.json();
+                log(`Config Data: <pre>${JSON.stringify(data, null, 2)}</pre>`, 'info');
+                
+                if (data.success) {
+                    log('✅ Config API working correctly!', 'success');
+                } else {
+                    log(`❌ Config API error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Config API failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testAllAPIs() {
+            log('Testing all APIs...', 'info');
+            await testStatusAPI();
+            await testConfigAPI();
+            log('All API tests completed!', 'info');
+        }
+        
+        // Auto-test on page load
+        window.addEventListener('load', () => {
+            log('Page loaded, starting auto-test...', 'info');
+            setTimeout(() => testAllAPIs(), 1000);
+        });
+    </script>
+</body>
+</html>
+

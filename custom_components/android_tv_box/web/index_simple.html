@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Android TV Box Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            color: #4a5568;
+            font-size: 2rem;
+            margin: 0;
+        }
+        
+        .status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+        
+        .status.online {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .status.offline {
+            background: #f56565;
+            color: white;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .tab-button {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-button:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: translateY(-2px);
+        }
+        
+        .tab-button.active {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .card h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        
+        .label {
+            font-weight: 500;
+            color: #4a5568;
+        }
+        
+        .value {
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .value.on {
+            color: #48bb78;
+        }
+        
+        .value.off {
+            color: #f56565;
+        }
+        
+        .value.running {
+            color: #48bb78;
+        }
+        
+        .value.stopped {
+            color: #f56565;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #ed8936;
+            color: white;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #4a5568;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+        }
+        
+        .toast.success {
+            background: #48bb78;
+        }
+        
+        .toast.error {
+            background: #f56565;
+        }
+        
+        .toast.warning {
+            background: #ed8936;
+        }
+        
+        .toast.info {
+            background: #4299e1;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>📱 Android TV Box Management</h1>
+            <div>
+                <span id="connection-status" class="status offline">Offline</span>
+            </div>
+        </header>
+
+        <nav class="nav-tabs">
+            <button class="tab-button active" onclick="switchTab('dashboard')">
+                📊 Dashboard
+            </button>
+            <button class="tab-button" onclick="switchTab('apps')">
+                📱 Apps
+            </button>
+            <button class="tab-button" onclick="switchTab('config')">
+                ⚙️ Configuration
+            </button>
+            <button class="tab-button" onclick="switchTab('mqtt')">
+                📡 MQTT
+            </button>
+        </nav>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="dashboard-grid">
+                <div class="card">
+                    <h3>🔌 Device Status</h3>
+                    <div class="status-item">
+                        <span class="label">Power:</span>
+                        <span id="device-power" class="value">Unknown</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">WiFi:</span>
+                        <span id="wifi-status" class="value">Unknown</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Current App:</span>
+                        <span id="current-app" class="value">Unknown</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🛡️ iSG Status</h3>
+                    <div class="status-item">
+                        <span class="label">iSG Running:</span>
+                        <span id="isg-status" class="value">Unknown</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Last Check:</span>
+                        <span id="last-check" class="value">Never</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>⚡ Quick Actions</h3>
+                    <div class="actions">
+                        <button class="btn btn-primary" onclick="refreshStatus()">
+                            🔄 Refresh Status
+                        </button>
+                        <button class="btn btn-success" onclick="wakeISG()">
+                            ▶️ Wake iSG
+                        </button>
+                        <button class="btn btn-warning" onclick="restartISG()">
+                            🔄 Restart iSG
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Apps Tab -->
+        <div id="apps" class="tab-content">
+            <div class="card">
+                <h3>📱 Application Management</h3>
+                <p>App management functionality will be implemented here.</p>
+                <button class="btn btn-primary" onclick="loadApps()">Load Apps</button>
+                <div id="apps-list"></div>
+            </div>
+        </div>
+
+        <!-- Configuration Tab -->
+        <div id="config" class="tab-content">
+            <div class="card">
+                <h3>⚙️ Configuration</h3>
+                <p>Configuration management functionality will be implemented here.</p>
+                <button class="btn btn-primary" onclick="loadConfig()">Load Configuration</button>
+                <div id="config-info"></div>
+            </div>
+        </div>
+
+        <!-- MQTT Tab -->
+        <div id="mqtt" class="tab-content">
+            <div class="card">
+                <h3>📡 MQTT Settings</h3>
+                <p>MQTT configuration functionality will be implemented here.</p>
+                <button class="btn btn-primary" onclick="testMQTT()">Test MQTT</button>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">
+            ⏳ Loading...
+        </div>
+    </div>
+
+    <script>
+        // Simple JavaScript without complex classes
+        let currentTab = 'dashboard';
+        
+        function switchTab(tabName) {
+            console.log('Switching to tab:', tabName);
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName).classList.add('active');
+            
+            currentTab = tabName;
+        }
+        
+        function showLoading() {
+            document.getElementById('loading').classList.add('show');
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('show');
+        }
+        
+        function showToast(message, type = 'info') {
+            console.log(`Toast: ${type} - ${message}`);
+            
+            // Remove existing toast
+            const existingToast = document.querySelector('.toast');
+            if (existingToast) {
+                existingToast.remove();
+            }
+            
+            // Create new toast
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            // Show toast
+            setTimeout(() => toast.classList.add('show'), 100);
+            
+            // Hide toast after 3 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        async function refreshStatus() {
+            console.log('Refreshing status...');
+            try {
+                showLoading();
+                
+                const response = await fetch('/api/status');
+                console.log('Response:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Data:', data);
+                
+                if (data.success) {
+                    updateStatusDisplay(data.data);
+                    showToast('Status refreshed successfully!', 'success');
+                } else {
+                    showToast('Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function updateStatusDisplay(status) {
+            console.log('Updating display:', status);
+            
+            // Update connection status
+            const connectionStatus = document.getElementById('connection-status');
+            if (connectionStatus) {
+                if (status.adb_connected) {
+                    connectionStatus.textContent = 'Online';
+                    connectionStatus.className = 'status online';
+                } else {
+                    connectionStatus.textContent = 'Offline';
+                    connectionStatus.className = 'status offline';
+                }
+            }
+            
+            // Update device status
+            const devicePower = document.getElementById('device-power');
+            if (devicePower) {
+                devicePower.textContent = status.device_powered_on ? 'On' : 'Off';
+                devicePower.className = `value ${status.device_powered_on ? 'on' : 'off'}`;
+            }
+            
+            const wifiStatus = document.getElementById('wifi-status');
+            if (wifiStatus) {
+                wifiStatus.textContent = status.wifi_enabled ? 'Enabled' : 'Disabled';
+                wifiStatus.className = `value ${status.wifi_enabled ? 'on' : 'off'}`;
+            }
+            
+            const currentApp = document.getElementById('current-app');
+            if (currentApp) {
+                currentApp.textContent = status.current_app || 'Unknown';
+            }
+            
+            const isgStatus = document.getElementById('isg-status');
+            if (isgStatus) {
+                isgStatus.textContent = status.isg_running ? 'Running' : 'Stopped';
+                isgStatus.className = `value ${status.isg_running ? 'running' : 'stopped'}`;
+            }
+            
+            const lastCheck = document.getElementById('last-check');
+            if (lastCheck) {
+                lastCheck.textContent = new Date(status.timestamp).toLocaleString();
+            }
+        }
+        
+        async function wakeISG() {
+            console.log('Waking iSG...');
+            try {
+                showLoading();
+                const response = await fetch('/api/wake-isg', { method: 'POST' });
+                
+                if (response.status === 404) {
+                    showToast('iSG wake function not yet implemented', 'warning');
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('iSG wake up initiated!', 'success');
+                    setTimeout(() => refreshStatus(), 2000);
+                } else {
+                    showToast('Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function restartISG() {
+            console.log('Restarting iSG...');
+            try {
+                showLoading();
+                const response = await fetch('/api/restart-isg', { method: 'POST' });
+                
+                if (response.status === 404) {
+                    showToast('iSG restart function not yet implemented', 'warning');
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('iSG restart initiated!', 'success');
+                    setTimeout(() => refreshStatus(), 3000);
+                } else {
+                    showToast('Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function loadApps() {
+            console.log('Loading apps...');
+            try {
+                showLoading();
+                const response = await fetch('/api/apps');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const appsList = document.getElementById('apps-list');
+                    appsList.innerHTML = '<h4>Installed Apps:</h4>';
+                    
+                    data.data.forEach(app => {
+                        const appDiv = document.createElement('div');
+                        appDiv.innerHTML = `
+                            <div style="padding: 10px; border: 1px solid #ddd; margin: 5px 0; border-radius: 5px;">
+                                <strong>${app.name}</strong><br>
+                                Package: ${app.package}<br>
+                                Visible: ${app.visible ? 'Yes' : 'No'}
+                            </div>
+                        `;
+                        appsList.appendChild(appDiv);
+                    });
+                    
+                    showToast('Apps loaded successfully!', 'success');
+                } else {
+                    showToast('Error loading apps: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function loadConfig() {
+            console.log('Loading configuration...');
+            try {
+                showLoading();
+                const response = await fetch('/api/config');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const configInfo = document.getElementById('config-info');
+                    configInfo.innerHTML = `
+                        <h4>Current Configuration:</h4>
+                        <div style="padding: 10px; background: #f5f5f5; border-radius: 5px; margin: 10px 0;">
+                            <strong>ADB Host:</strong> ${data.data.host}<br>
+                            <strong>ADB Port:</strong> ${data.data.port}<br>
+                            <strong>Device Name:</strong> ${data.data.device_name}<br>
+                            <strong>CPU Threshold:</strong> ${data.data.cpu_threshold}%<br>
+                            <strong>Termux Mode:</strong> ${data.data.termux_mode ? 'Enabled' : 'Disabled'}
+                        </div>
+                    `;
+                    
+                    showToast('Configuration loaded successfully!', 'success');
+                } else {
+                    showToast('Error loading config: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function testMQTT() {
+            console.log('Testing MQTT...');
+            showToast('MQTT test function not yet implemented', 'warning');
+        }
+        
+        // Auto-refresh status every 30 seconds
+        setInterval(() => {
+            console.log('Auto-refreshing status...');
+            refreshStatus();
+        }, 30000);
+        
+        // Initial status update
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Page loaded, refreshing status...');
+            setTimeout(() => refreshStatus(), 1000);
+        });
+    </script>
+</body>
+</html>
+

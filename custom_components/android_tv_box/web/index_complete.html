@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Android TV Box Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            color: #4a5568;
+            font-size: 2rem;
+            font-weight: 600;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status.online {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .status.offline {
+            background: #f56565;
+            color: white;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .tab-button {
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .tab-button:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: translateY(-2px);
+        }
+        
+        .tab-button.active {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .card h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        
+        .label {
+            font-weight: 500;
+            color: #4a5568;
+        }
+        
+        .value {
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .value.on {
+            color: #48bb78;
+        }
+        
+        .value.off {
+            color: #f56565;
+        }
+        
+        .value.running {
+            color: #48bb78;
+        }
+        
+        .value.stopped {
+            color: #f56565;
+        }
+        
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #ed8936;
+            color: white;
+        }
+        
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+        
+        .btn-info {
+            background: #38b2ac;
+            color: white;
+        }
+        
+        .btn-small {
+            padding: 8px 12px;
+            font-size: 0.9rem;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #4a5568;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+        }
+        
+        .toast.success {
+            background: #48bb78;
+        }
+        
+        .toast.error {
+            background: #f56565;
+        }
+        
+        .toast.warning {
+            background: #ed8936;
+        }
+        
+        .toast.info {
+            background: #4299e1;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #4a5568;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+        
+        .config-sections {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .config-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .config-section h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .apps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .app-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .app-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .app-card h4 {
+            color: #4a5568;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+        
+        .app-card p {
+            color: #718096;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        
+        .app-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-header h2 {
+            color: #4a5568;
+            font-size: 1.5rem;
+        }
+        
+        .close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #718096;
+        }
+        
+        .close:hover {
+            color: #4a5568;
+        }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #4299e1;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-tv"></i> Android TV Box Management</h1>
+            <div class="status-indicator">
+                <span id="connection-status" class="status offline">Offline</span>
+            </div>
+        </header>
+
+        <nav class="nav-tabs">
+            <button class="tab-button active" data-tab="dashboard">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+            </button>
+            <button class="tab-button" data-tab="apps">
+                <i class="fas fa-mobile-alt"></i> Apps
+            </button>
+            <button class="tab-button" data-tab="config">
+                <i class="fas fa-cog"></i> Configuration
+            </button>
+            <button class="tab-button" data-tab="mqtt">
+                <i class="fas fa-broadcast-tower"></i> MQTT
+            </button>
+        </nav>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="dashboard-grid">
+                <div class="card">
+                    <h3><i class="fas fa-power-off"></i> Device Status</h3>
+                    <div class="status-item">
+                        <span class="label">Power:</span>
+                        <span id="device-power" class="value">Unknown</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">WiFi:</span>
+                        <span id="wifi-status" class="value">Unknown</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Current App:</span>
+                        <span id="current-app" class="value">Unknown</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3><i class="fas fa-shield-alt"></i> iSG Status</h3>
+                    <div class="status-item">
+                        <span class="label">iSG Running:</span>
+                        <span id="isg-status" class="value">Unknown</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="label">Last Check:</span>
+                        <span id="last-check" class="value">Never</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3><i class="fas fa-tools"></i> Quick Actions</h3>
+                    <div class="actions">
+                        <button id="refresh-status" class="btn btn-primary">
+                            <i class="fas fa-sync-alt"></i> Refresh Status
+                        </button>
+                        <button id="wake-isg" class="btn btn-success">
+                            <i class="fas fa-play"></i> Wake iSG
+                        </button>
+                        <button id="restart-isg" class="btn btn-warning">
+                            <i class="fas fa-redo"></i> Restart iSG
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Apps Tab -->
+        <div id="apps" class="tab-content">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3><i class="fas fa-mobile-alt"></i> Application Management</h3>
+                    <button id="add-app-btn" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add App
+                    </button>
+                </div>
+                <div id="apps-grid" class="apps-grid">
+                    <!-- Apps will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Tab -->
+        <div id="config" class="tab-content">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3><i class="fas fa-cog"></i> Configuration</h3>
+                    <button id="save-config" class="btn btn-success">
+                        <i class="fas fa-save"></i> Save Configuration
+                    </button>
+                </div>
+                <div class="config-sections">
+                    <div class="config-section">
+                        <h3><i class="fas fa-network-wired"></i> ADB Connection</h3>
+                        <div class="form-group">
+                            <label for="adb-host">Host:</label>
+                            <input type="text" id="adb-host" placeholder="127.0.0.1">
+                        </div>
+                        <div class="form-group">
+                            <label for="adb-port">Port:</label>
+                            <input type="number" id="adb-port" placeholder="5555">
+                        </div>
+                        <div class="form-group">
+                            <label for="device-name">Device Name:</label>
+                            <input type="text" id="device-name" placeholder="Android TV Box">
+                        </div>
+                        <button id="test-adb" class="btn btn-info">
+                            <i class="fas fa-plug"></i> Test Connection
+                        </button>
+                    </div>
+
+                    <div class="config-section">
+                        <h3><i class="fas fa-home"></i> Home Assistant</h3>
+                        <div class="form-group">
+                            <label for="ha-host">HA Host:</label>
+                            <input type="text" id="ha-host" placeholder="localhost">
+                        </div>
+                        <div class="form-group">
+                            <label for="ha-port">HA Port:</label>
+                            <input type="number" id="ha-port" placeholder="8123">
+                        </div>
+                        <div class="form-group">
+                            <label for="ha-token">HA Token:</label>
+                            <input type="password" id="ha-token" placeholder="Your HA token">
+                        </div>
+                    </div>
+
+                    <div class="config-section">
+                        <h3><i class="fas fa-camera"></i> Screenshot Settings</h3>
+                        <div class="form-group">
+                            <label for="screenshot-path">Screenshot Path:</label>
+                            <input type="text" id="screenshot-path" placeholder="/sdcard/screenshots/">
+                        </div>
+                        <div class="form-group">
+                            <label for="screenshot-keep-count">Keep Count:</label>
+                            <input type="number" id="screenshot-keep-count" placeholder="3">
+                        </div>
+                        <div class="form-group">
+                            <label for="screenshot-interval">Interval (seconds):</label>
+                            <input type="number" id="screenshot-interval" placeholder="3">
+                        </div>
+                    </div>
+
+                    <div class="config-section">
+                        <h3><i class="fas fa-chart-line"></i> Performance Settings</h3>
+                        <div class="form-group">
+                            <label for="performance-check-interval">Check Interval (ms):</label>
+                            <input type="number" id="performance-check-interval" placeholder="500">
+                        </div>
+                        <div class="form-group">
+                            <label for="cpu-threshold">CPU Threshold (%):</label>
+                            <input type="number" id="cpu-threshold" placeholder="50">
+                        </div>
+                        <div class="form-group">
+                            <label for="termux-mode">Termux Mode:</label>
+                            <label class="switch">
+                                <input type="checkbox" id="termux-mode">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MQTT Tab -->
+        <div id="mqtt" class="tab-content">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3><i class="fas fa-broadcast-tower"></i> MQTT Settings</h3>
+                    <button id="test-mqtt" class="btn btn-info">
+                        <i class="fas fa-plug"></i> Test MQTT Connection
+                    </button>
+                </div>
+                <div class="config-sections">
+                    <div class="config-section">
+                        <h3><i class="fas fa-server"></i> MQTT Broker</h3>
+                        <div class="form-group">
+                            <label for="mqtt-host">Broker Host:</label>
+                            <input type="text" id="mqtt-host" placeholder="localhost">
+                        </div>
+                        <div class="form-group">
+                            <label for="mqtt-port">Broker Port:</label>
+                            <input type="number" id="mqtt-port" placeholder="1883">
+                        </div>
+                        <div class="form-group">
+                            <label for="mqtt-username">Username:</label>
+                            <input type="text" id="mqtt-username" placeholder="mqtt_user">
+                        </div>
+                        <div class="form-group">
+                            <label for="mqtt-password">Password:</label>
+                            <input type="password" id="mqtt-password" placeholder="mqtt_password">
+                        </div>
+                    </div>
+
+                    <div class="config-section">
+                        <h3><i class="fas fa-topic"></i> Topic Settings</h3>
+                        <div class="form-group">
+                            <label for="mqtt-base-topic">Base Topic:</label>
+                            <input type="text" id="mqtt-base-topic" placeholder="android_tv_box">
+                        </div>
+                        <div class="form-group">
+                            <label for="mqtt-qos">QoS Level:</label>
+                            <select id="mqtt-qos">
+                                <option value="0">0 - At most once</option>
+                                <option value="1">1 - At least once</option>
+                                <option value="2">2 - Exactly once</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="mqtt-retain">Retain Messages:</label>
+                            <label class="switch">
+                                <input type="checkbox" id="mqtt-retain">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="config-section">
+                        <h3><i class="fas fa-cog"></i> MQTT Options</h3>
+                        <div class="form-group">
+                            <label for="mqtt-client-id">Client ID:</label>
+                            <input type="text" id="mqtt-client-id" placeholder="android_tv_box_client">
+                        </div>
+                        <div class="form-group">
+                            <label for="mqtt-keepalive">Keep Alive (seconds):</label>
+                            <input type="number" id="mqtt-keepalive" placeholder="60">
+                        </div>
+                        <div class="form-group">
+                            <label for="mqtt-clean-session">Clean Session:</label>
+                            <label class="switch">
+                                <input type="checkbox" id="mqtt-clean-session" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">
+            <i class="fas fa-spinner fa-spin"></i> Loading...
+        </div>
+    </div>
+
+    <!-- Add App Modal -->
+    <div id="add-app-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-plus"></i> Add Application</h2>
+                <button class="close" onclick="closeModal('add-app-modal')">&times;</button>
+            </div>
+            <form id="add-app-form">
+                <div class="form-group">
+                    <label for="app-name">Application Name:</label>
+                    <input type="text" id="app-name" placeholder="e.g., YouTube" required>
+                </div>
+                <div class="form-group">
+                    <label for="app-package">Package Name:</label>
+                    <input type="text" id="app-package" placeholder="e.g., com.google.android.youtube.tv" required>
+                </div>
+                <div class="form-group">
+                    <label for="app-visible">Visible in Selector:</label>
+                    <label class="switch">
+                        <input type="checkbox" id="app-visible" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                    <button type="button" class="btn btn-danger" onclick="closeModal('add-app-modal')">Cancel</button>
+                    <button type="submit" class="btn btn-success">Add App</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+    <script>
+        class AndroidTVBoxManager {
+            constructor() {
+                console.log('AndroidTVBoxManager initializing...');
+                this.currentTab = 'dashboard';
+                this.statusInterval = null;
+                this.apps = [];
+                this.config = {};
+                this.init();
+            }
+
+            init() {
+                console.log('Setting up event listeners...');
+                this.setupEventListeners();
+                console.log('Loading initial data...');
+                this.loadApps();
+                this.loadConfiguration();
+                console.log('Starting status updates...');
+                this.startStatusUpdates();
+                console.log('AndroidTVBoxManager initialization complete');
+            }
+
+            setupEventListeners() {
+                // Tab navigation
+                document.querySelectorAll('.tab-button').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const tab = e.target.dataset.tab || e.target.closest('[data-tab]')?.dataset.tab;
+                        if (tab) {
+                            this.switchTab(tab);
+                        }
+                    });
+                });
+
+                // Dashboard actions
+                const refreshBtn = document.getElementById('refresh-status');
+                if (refreshBtn) {
+                    refreshBtn.addEventListener('click', () => {
+                        console.log('Refresh button clicked');
+                        this.refreshStatus();
+                    });
+                }
+
+                const wakeBtn = document.getElementById('wake-isg');
+                if (wakeBtn) {
+                    wakeBtn.addEventListener('click', () => {
+                        console.log('Wake iSG button clicked');
+                        this.wakeISG();
+                    });
+                }
+
+                const restartBtn = document.getElementById('restart-isg');
+                if (restartBtn) {
+                    restartBtn.addEventListener('click', () => {
+                        console.log('Restart iSG button clicked');
+                        this.restartISG();
+                    });
+                }
+
+                // Apps actions
+                const addAppBtn = document.getElementById('add-app-btn');
+                if (addAppBtn) {
+                    addAppBtn.addEventListener('click', () => {
+                        this.showModal('add-app-modal');
+                    });
+                }
+
+                const addAppForm = document.getElementById('add-app-form');
+                if (addAppForm) {
+                    addAppForm.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        this.addApp();
+                    });
+                }
+
+                // Configuration actions
+                const saveConfigBtn = document.getElementById('save-config');
+                if (saveConfigBtn) {
+                    saveConfigBtn.addEventListener('click', () => {
+                        this.saveConfiguration();
+                    });
+                }
+
+                const testAdbBtn = document.getElementById('test-adb');
+                if (testAdbBtn) {
+                    testAdbBtn.addEventListener('click', () => {
+                        this.testAdbConnection();
+                    });
+                }
+
+                // MQTT actions
+                const testMqttBtn = document.getElementById('test-mqtt');
+                if (testMqttBtn) {
+                    testMqttBtn.addEventListener('click', () => {
+                        this.testMqttConnection();
+                    });
+                }
+            }
+
+            switchTab(tabName) {
+                console.log('Switching to tab:', tabName);
+                
+                // Update tab buttons
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+                
+                // Update tab content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(tabName).classList.add('active');
+                
+                this.currentTab = tabName;
+            }
+
+            async refreshStatus() {
+                console.log('refreshStatus() called');
+                try {
+                    this.showLoading();
+                    console.log('Fetching /api/status...');
+                    
+                    const response = await fetch('/api/status');
+                    console.log('Response received:', response.status, response.statusText);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    console.log('Response data:', data);
+                    
+                    if (data.success) {
+                        console.log('Updating status display with data:', data.data);
+                        this.updateStatusDisplay(data.data);
+                        this.showToast('Status refreshed successfully!', 'success');
+                    } else {
+                        console.error('API error:', data.error);
+                        this.showToast('Error refreshing status: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    console.error('Refresh status error:', error);
+                    this.showToast('Error refreshing status: ' + error.message, 'error');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            updateStatusDisplay(status) {
+                console.log('Updating status display with:', status);
+                
+                // Update connection status
+                const connectionStatus = document.getElementById('connection-status');
+                console.log('connection-status element:', connectionStatus);
+                if (connectionStatus) {
+                    if (status.adb_connected) {
+                        connectionStatus.textContent = 'Online';
+                        connectionStatus.className = 'status online';
+                        console.log('Set connection status to Online');
+                    } else {
+                        connectionStatus.textContent = 'Offline';
+                        connectionStatus.className = 'status offline';
+                        console.log('Set connection status to Offline');
+                    }
+                } else {
+                    console.error('connection-status element not found!');
+                }
+
+                // Update device status
+                const devicePower = document.getElementById('device-power');
+                console.log('device-power element:', devicePower);
+                if (devicePower) {
+                    devicePower.textContent = status.device_powered_on ? 'On' : 'Off';
+                    devicePower.className = `value ${status.device_powered_on ? 'on' : 'off'}`;
+                    console.log('Set device power to:', status.device_powered_on ? 'On' : 'Off');
+                } else {
+                    console.error('device-power element not found!');
+                }
+                
+                const wifiStatus = document.getElementById('wifi-status');
+                console.log('wifi-status element:', wifiStatus);
+                if (wifiStatus) {
+                    wifiStatus.textContent = status.wifi_enabled ? 'Enabled' : 'Disabled';
+                    wifiStatus.className = `value ${status.wifi_enabled ? 'on' : 'off'}`;
+                    console.log('Set WiFi status to:', status.wifi_enabled ? 'Enabled' : 'Disabled');
+                } else {
+                    console.error('wifi-status element not found!');
+                }
+                
+                const currentApp = document.getElementById('current-app');
+                console.log('current-app element:', currentApp);
+                if (currentApp) {
+                    currentApp.textContent = status.current_app || 'Unknown';
+                    console.log('Set current app to:', status.current_app || 'Unknown');
+                } else {
+                    console.error('current-app element not found!');
+                }
+                
+                const isgStatus = document.getElementById('isg-status');
+                console.log('isg-status element:', isgStatus);
+                if (isgStatus) {
+                    isgStatus.textContent = status.isg_running ? 'Running' : 'Stopped';
+                    isgStatus.className = `value ${status.isg_running ? 'running' : 'stopped'}`;
+                    console.log('Set iSG status to:', status.isg_running ? 'Running' : 'Stopped');
+                } else {
+                    console.error('isg-status element not found!');
+                }
+                
+                const lastCheck = document.getElementById('last-check');
+                console.log('last-check element:', lastCheck);
+                if (lastCheck) {
+                    lastCheck.textContent = new Date(status.timestamp).toLocaleString();
+                    console.log('Set last check to:', new Date(status.timestamp).toLocaleString());
+                } else {
+                    console.error('last-check element not found!');
+                }
+            }
+
+            async loadApps() {
+                console.log('Loading apps...');
+                try {
+                    const response = await fetch('/api/apps');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.apps = data.data;
+                        this.renderApps();
+                        console.log('Apps loaded:', this.apps);
+                    } else {
+                        console.error('Failed to load apps:', data.error);
+                        this.showToast('Failed to load apps: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error loading apps:', error);
+                    this.showToast('Error loading apps: ' + error.message, 'error');
+                }
+            }
+
+            renderApps() {
+                const appsGrid = document.getElementById('apps-grid');
+                if (!appsGrid) return;
+
+                appsGrid.innerHTML = '';
+                
+                this.apps.forEach(app => {
+                    const appCard = document.createElement('div');
+                    appCard.className = 'app-card';
+                    appCard.innerHTML = `
+                        <h4>${app.name}</h4>
+                        <p>Package: ${app.package}</p>
+                        <p>Visible: ${app.visible ? 'Yes' : 'No'}</p>
+                        <div class="app-actions">
+                            <button class="btn btn-primary btn-small" onclick="manager.launchApp('${app.package}')">
+                                <i class="fas fa-play"></i> Launch
+                            </button>
+                            <button class="btn btn-warning btn-small" onclick="manager.editApp('${app.id}')">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="btn btn-danger btn-small" onclick="manager.deleteApp('${app.id}')">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </div>
+                    `;
+                    appsGrid.appendChild(appCard);
+                });
+            }
+
+            async loadConfiguration() {
+                console.log('Loading configuration...');
+                try {
+                    const response = await fetch('/api/config');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.config = data.data;
+                        this.populateConfigForm();
+                        console.log('Configuration loaded:', this.config);
+                    } else {
+                        console.error('Failed to load configuration:', data.error);
+                        this.showToast('Failed to load configuration: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error loading configuration:', error);
+                    this.showToast('Error loading configuration: ' + error.message, 'error');
+                }
+            }
+
+            populateConfigForm() {
+                // ADB settings
+                document.getElementById('adb-host').value = this.config.host || '';
+                document.getElementById('adb-port').value = this.config.port || '';
+                document.getElementById('device-name').value = this.config.device_name || '';
+
+                // Screenshot settings
+                document.getElementById('screenshot-path').value = this.config.screenshot_path || '';
+                document.getElementById('screenshot-keep-count').value = this.config.screenshot_keep_count || '';
+                document.getElementById('screenshot-interval').value = this.config.screenshot_interval || '';
+
+                // Performance settings
+                document.getElementById('performance-check-interval').value = this.config.performance_check_interval || '';
+                document.getElementById('cpu-threshold').value = this.config.cpu_threshold || '';
+                document.getElementById('termux-mode').checked = this.config.termux_mode || false;
+            }
+
+            async addApp() {
+                const name = document.getElementById('app-name').value;
+                const package = document.getElementById('app-package').value;
+                const visible = document.getElementById('app-visible').checked;
+
+                console.log('Adding app:', { name, package, visible });
+
+                try {
+                    this.showLoading();
+                    const response = await fetch('/api/apps', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ name, package, visible })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.showToast('App added successfully!', 'success');
+                        this.closeModal('add-app-modal');
+                        document.getElementById('add-app-form').reset();
+                        this.loadApps();
+                    } else {
+                        this.showToast('Error adding app: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error adding app:', error);
+                    this.showToast('Error adding app: ' + error.message, 'error');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            async launchApp(packageName) {
+                console.log('Launching app:', packageName);
+                try {
+                    this.showLoading();
+                    const response = await fetch('/api/launch-app', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ package_name: packageName })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.showToast('App launched successfully!', 'success');
+                        setTimeout(() => this.refreshStatus(), 2000);
+                    } else {
+                        this.showToast('Error launching app: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error launching app:', error);
+                    this.showToast('Error launching app: ' + error.message, 'error');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            async saveConfiguration() {
+                console.log('Saving configuration...');
+                
+                const config = {
+                    host: document.getElementById('adb-host').value,
+                    port: parseInt(document.getElementById('adb-port').value),
+                    device_name: document.getElementById('device-name').value,
+                    screenshot_path: document.getElementById('screenshot-path').value,
+                    screenshot_keep_count: parseInt(document.getElementById('screenshot-keep-count').value),
+                    screenshot_interval: parseInt(document.getElementById('screenshot-interval').value),
+                    performance_check_interval: parseInt(document.getElementById('performance-check-interval').value),
+                    cpu_threshold: parseInt(document.getElementById('cpu-threshold').value),
+                    termux_mode: document.getElementById('termux-mode').checked
+                };
+
+                try {
+                    this.showLoading();
+                    const response = await fetch('/api/config', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(config)
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.showToast('Configuration saved successfully!', 'success');
+                        this.config = { ...this.config, ...config };
+                    } else {
+                        this.showToast('Error saving configuration: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error saving configuration:', error);
+                    this.showToast('Error saving configuration: ' + error.message, 'error');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            async testAdbConnection() {
+                console.log('Testing ADB connection...');
+                try {
+                    this.showLoading();
+                    const response = await fetch('/api/test-connection', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            host: document.getElementById('adb-host').value,
+                            port: parseInt(document.getElementById('adb-port').value)
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.showToast('ADB connection test successful!', 'success');
+                    } else {
+                        this.showToast('ADB connection test failed: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error testing ADB connection:', error);
+                    this.showToast('Error testing ADB connection: ' + error.message, 'error');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            async testMqttConnection() {
+                console.log('Testing MQTT connection...');
+                try {
+                    this.showLoading();
+                    const response = await fetch('/api/test-mqtt', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            host: document.getElementById('mqtt-host').value,
+                            port: parseInt(document.getElementById('mqtt-port').value),
+                            username: document.getElementById('mqtt-username').value,
+                            password: document.getElementById('mqtt-password').value
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.showToast('MQTT connection test successful!', 'success');
+                    } else {
+                        this.showToast('MQTT connection test failed: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error testing MQTT connection:', error);
+                    this.showToast('Error testing MQTT connection: ' + error.message, 'error');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            async wakeISG() {
+                console.log('Wake iSG button clicked');
+                try {
+                    this.showLoading();
+                    const response = await fetch('/api/wake-isg', { method: 'POST' });
+                    
+                    if (response.status === 404) {
+                        this.showToast('iSG wake function not yet implemented', 'warning');
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showToast('iSG wake up initiated!', 'success');
+                        setTimeout(() => this.refreshStatus(), 2000);
+                    } else {
+                        this.showToast('Error waking up iSG: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    console.error('Wake iSG error:', error);
+                    this.showToast('Error waking up iSG: ' + error.message, 'error');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            async restartISG() {
+                console.log('Restart iSG button clicked');
+                try {
+                    this.showLoading();
+                    const response = await fetch('/api/restart-isg', { method: 'POST' });
+                    
+                    if (response.status === 404) {
+                        this.showToast('iSG restart function not yet implemented', 'warning');
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showToast('iSG restart initiated!', 'success');
+                        setTimeout(() => this.refreshStatus(), 3000);
+                    } else {
+                        this.showToast('Error restarting iSG: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    console.error('Restart iSG error:', error);
+                    this.showToast('Error restarting iSG: ' + error.message, 'error');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            startStatusUpdates() {
+                // Update status every 30 seconds
+                this.statusInterval = setInterval(() => {
+                    console.log('Auto-refreshing status...');
+                    this.refreshStatus();
+                }, 30000);
+                
+                // Initial status update
+                console.log('Performing initial status update...');
+                this.refreshStatus();
+            }
+
+            showModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    modal.classList.add('show');
+                }
+            }
+
+            closeModal(modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    modal.classList.remove('show');
+                }
+            }
+
+            showLoading() {
+                const loading = document.getElementById('loading');
+                if (loading) {
+                    loading.classList.add('show');
+                }
+            }
+
+            hideLoading() {
+                const loading = document.getElementById('loading');
+                if (loading) {
+                    loading.classList.remove('show');
+                }
+            }
+
+            showToast(message, type = 'info') {
+                console.log(`Toast: ${type} - ${message}`);
+                
+                // Remove existing toast
+                const existingToast = document.querySelector('.toast');
+                if (existingToast) {
+                    existingToast.remove();
+                }
+                
+                // Create new toast
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                
+                // Show toast
+                setTimeout(() => toast.classList.add('show'), 100);
+                
+                // Hide toast after 3 seconds
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            }
+        }
+
+        // Global functions for modal handling
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('show');
+            }
+        }
+
+        // Initialize the manager when the page loads
+        let manager;
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, initializing AndroidTVBoxManager...');
+            manager = new AndroidTVBoxManager();
+        });
+    </script>
+</body>
+</html>
+
