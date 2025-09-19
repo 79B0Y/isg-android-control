@@ -3,11 +3,13 @@ import logging
 from typing import Any, Dict, Optional
 
 import voluptuous as vol
+from adb_shell.exceptions import AdbAuthError, AdbConnectionError, AdbTimeoutError
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_validation as cv
 
-from .adb_service import ADBService
+from .adb_service import ADBConnectionError as IntegrationADBConnectionError
+from .adb_service import ADBKeyError, ADBService
 from .config import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -17,7 +19,6 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Required("host", default="127.0.0.1"): str,
         vol.Required("port", default=5555): vol.All(vol.Coerce(int), vol.Range(min=1, max=65535)),
         vol.Required("name", default="Android TV Box"): str,
-        vol.Optional("adb_path", default="/usr/bin/adb"): str,
     }
 )
 
@@ -39,25 +40,37 @@ class AndroidTVBoxConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
 
             # Test ADB connection
-            try:
-                adb_service = ADBService(
-                    host=user_input["host"],
-                    port=user_input["port"],
-                    adb_path=user_input.get("adb_path", "/usr/bin/adb")
-                )
+            adb_service = ADBService(
+                host=user_input["host"],
+                port=user_input["port"],
+            )
 
-                connected = await adb_service.connect()
-                if connected:
-                    await adb_service.disconnect()
-                    return self.async_create_entry(
-                        title=user_input["name"],
-                        data=user_input,
-                    )
-                else:
-                    errors["base"] = "cannot_connect"
-            except Exception as exc:
-                _LOGGER.error("Error testing ADB connection: %s", exc)
+            try:
+                await adb_service.connect()
+            except ADBKeyError as err:
+                _LOGGER.error("Unable to prepare ADB keys: %s", err)
+                errors["base"] = "adb_not_found"
+            except AdbAuthError as err:
+                _LOGGER.error("ADB authentication failed: %s", err)
+                errors["base"] = "adb_auth_failed"
+            except (AdbConnectionError, AdbTimeoutError, IntegrationADBConnectionError, OSError) as err:
+                _LOGGER.error("Unable to connect to Android device: %s", err)
+                errors["base"] = "cannot_connect"
+            except Exception as exc:  # pragma: no cover - defensive logging
+                _LOGGER.error("Unexpected error testing ADB connection: %s", exc)
                 errors["base"] = "unknown"
+            else:
+                entry_data = {
+                    "host": user_input["host"],
+                    "port": user_input["port"],
+                    "name": user_input["name"],
+                }
+                return self.async_create_entry(
+                    title=user_input["name"],
+                    data=entry_data,
+                )
+            finally:
+                await adb_service.disconnect()
 
         return self.async_show_form(
             step_id="user",

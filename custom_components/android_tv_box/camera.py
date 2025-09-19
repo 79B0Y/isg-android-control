@@ -140,11 +140,10 @@ class AndroidTVBoxCameraCoordinator(DataUpdateCoordinator):
             # Pull the file from device to local temp location
             temp_file = f"{temp_dir}/screenshot_{datetime.now().timestamp()}.png"
             
-            # Use adb pull to get the file
-            cmd = ["pull", latest_file, temp_file]
-            result = await self.adb_service._run_command(cmd)
-            
-            if os.path.exists(temp_file):
+            # Use the Python transport to pull the file
+            success = await self.adb_service.pull_file(latest_file, temp_file)
+
+            if success and os.path.exists(temp_file):
                 try:
                     with open(temp_file, 'rb') as f:
                         data = f.read()

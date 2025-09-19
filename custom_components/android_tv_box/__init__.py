@@ -1,14 +1,15 @@
 """Android TV Box integration for Home Assistant."""
 import asyncio
 import logging
-from typing import Dict, Any
+from typing import Any, Dict, Optional
 
+from adb_shell.exceptions import AdbAuthError
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
 from homeassistant.const import Platform
+from homeassistant.core import HomeAssistant
 
+from .adb_service import ADBConnectionError, ADBKeyError, ADBService
 from .config import DOMAIN
-from .adb_service import ADBService
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,14 +51,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Create ADB service
     host = entry.data.get("host", "127.0.0.1")
     port = entry.data.get("port", 5555)
-    adb_path = entry.data.get("adb_path", "/usr/bin/adb")
-
-    adb_service = ADBService(host=host, port=port, adb_path=adb_path)
+    adb_service = ADBService(host=host, port=port)
 
     # Test connection
-    connected = await adb_service.connect()
+    last_error: Optional[str] = None
+    try:
+        connected = await adb_service.connect()
+    except (ADBKeyError, ADBConnectionError, AdbAuthError) as err:
+        connected = False
+        last_error = str(err)
+
     if not connected:
-        _LOGGER.warning(f"Failed to connect to Android device at {host}:{port}")
+        if last_error:
+            _LOGGER.warning(
+                "Failed to connect to Android device at %s:%s: %s", host, port, last_error
+            )
+        else:
+            _LOGGER.warning("Failed to connect to Android device at %s:%s", host, port)
 
     # Store ADB service
     hass.data[DOMAIN]["adb_service"] = adb_service
