@@ -75,7 +75,8 @@ pip install --upgrade pip
 # Install Python dependencies (excluding Home Assistant as it's already installed)
 print_status "Installing Python dependencies..."
 print_status "Note: Home Assistant is already installed, skipping..."
-pip install uiautomator2 aiohttp aiohttp-cors paho-mqtt voluptuous
+print_warning "Ensure internet access or provide a pre-downloaded adb-shell wheel before continuing."
+pip install uiautomator2 adb-shell aiohttp aiohttp-cors paho-mqtt voluptuous
 
 # Test ADB connection
 print_status "Testing ADB connection to Android device..."

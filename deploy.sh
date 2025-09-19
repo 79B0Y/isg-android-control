@@ -196,12 +196,14 @@ apt update && apt install -y \\
 python3 -m venv ~/uiauto_env
 source ~/uiauto_env/bin/activate
 pip install --upgrade pip
-pip install uiautomator2 homeassistant
+pip install uiautomator2 adb-shell homeassistant
 
 # Test ADB connection
 adb connect 127.0.0.1:5555
 adb devices
 \`\`\`
+
+> **Note:** The `adb-shell` package is fetched from PyPI, so ensure internet connectivity or have a local wheel available before running the command.
 
 ## Testing
 

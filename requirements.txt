@@ -14,3 +14,4 @@ paho-mqtt>=1.6.0
 
 # Other dependencies
 voluptuous>=0.13.0
+adb-shell>=0.4.4
