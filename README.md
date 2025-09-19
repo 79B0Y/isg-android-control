@@ -190,6 +190,8 @@ android_tv_box:
 
 3. **Add the integration** through the UI
 
+> **Cleanup Note:** If you deployed earlier versions of this script, remove any directories named like `android_tv_box.backup.*` from `custom_components` manually—Home Assistant may still try to treat dotted backup folders as integrations.
+
 ## 🔧 Prerequisites
 
 ### Android Device Setup
