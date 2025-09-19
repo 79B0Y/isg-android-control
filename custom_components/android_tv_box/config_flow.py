@@ -14,20 +14,25 @@ from .config import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
+BASE_ADB_ERROR = getattr(
+    adb_exceptions,
+    "AdbError",
+    getattr(adb_exceptions, "AdbException", Exception),
+)
 AdbAuthError = getattr(
     adb_exceptions,
     "AdbAuthError",
-    getattr(adb_exceptions, "AuthenticationError", adb_exceptions.AdbError),
+    getattr(adb_exceptions, "AuthenticationError", BASE_ADB_ERROR),
 )
 AdbConnectionError = getattr(
     adb_exceptions,
     "AdbConnectionError",
-    getattr(adb_exceptions, "ConnectionError", adb_exceptions.AdbError),
+    getattr(adb_exceptions, "ConnectionError", BASE_ADB_ERROR),
 )
 AdbTimeoutError = getattr(
     adb_exceptions,
     "AdbTimeoutError",
-    getattr(adb_exceptions, "TcpTimeoutException", adb_exceptions.AdbError),
+    getattr(adb_exceptions, "TcpTimeoutException", BASE_ADB_ERROR),
 )
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
