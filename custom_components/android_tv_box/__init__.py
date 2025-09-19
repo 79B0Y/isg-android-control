@@ -25,9 +25,11 @@ PLATFORMS = [
 
 async def async_setup(hass: HomeAssistant, config: Dict[str, Any]) -> bool:
     """Set up the Android TV Box component from configuration.yaml."""
-    # This integration is primarily configured via config flow
-    # but we support configuration.yaml for backward compatibility
+    # Store YAML config for web interface access
     if DOMAIN in config:
+        hass.data.setdefault(DOMAIN, {})
+        hass.data[DOMAIN]["yaml_config"] = config[DOMAIN]
+        
         # Import from configuration.yaml
         hass.async_create_task(
             hass.config_entries.flow.async_init(
@@ -59,6 +61,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Store ADB service
     hass.data[DOMAIN]["adb_service"] = adb_service
 
+    # Start web server
+    from .web_server import AndroidTVBoxWebServer
+    web_server = AndroidTVBoxWebServer(hass, port=3003)
+    started = await web_server.start()
+    if started:
+        _LOGGER.info("Android TV Box web server started on port 3003")
+        hass.data[DOMAIN]["web_server"] = web_server
+    else:
+        _LOGGER.warning("Failed to start Android TV Box web server")
+
     # Set up platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -72,6 +84,12 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
+        # Stop web server
+        if DOMAIN in hass.data and "web_server" in hass.data[DOMAIN]:
+            web_server = hass.data[DOMAIN]["web_server"]
+            await web_server.stop()
+            _LOGGER.info("Android TV Box web server stopped")
+
         # Disconnect ADB service
         if DOMAIN in hass.data and "adb_service" in hass.data[DOMAIN]:
             adb_service = hass.data[DOMAIN]["adb_service"]
@@ -80,5 +98,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         # Clean up data
         hass.data[DOMAIN].pop("config", None)
         hass.data[DOMAIN].pop("adb_service", None)
+        hass.data[DOMAIN].pop("web_server", None)
 
     return unload_ok

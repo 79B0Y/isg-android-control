@@ -1,6 +1,7 @@
 """Switch platform for Android TV Box integration."""
 import logging
 from typing import Any, Dict, List, Optional
+from datetime import timedelta
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
@@ -14,7 +15,7 @@ from .adb_service import ADBService
 
 _LOGGER = logging.getLogger(__name__)
 
-SCAN_INTERVAL = 30  # seconds
+SCAN_INTERVAL = timedelta(seconds=30)
 
 
 class AndroidTVBoxSwitchCoordinator(DataUpdateCoordinator):

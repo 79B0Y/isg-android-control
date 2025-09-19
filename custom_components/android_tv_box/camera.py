@@ -2,7 +2,7 @@
 import logging
 import asyncio
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from homeassistant.components.camera import Camera
@@ -17,7 +17,7 @@ from .adb_service import ADBService
 
 _LOGGER = logging.getLogger(__name__)
 
-SCAN_INTERVAL = 3  # seconds - screenshot interval
+SCAN_INTERVAL = timedelta(seconds=3)  # screenshot interval
 
 
 class AndroidTVBoxCameraCoordinator(DataUpdateCoordinator):

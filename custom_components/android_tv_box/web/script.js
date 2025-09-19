@@ -19,25 +19,39 @@ class AndroidTVBoxManager {
     }
 
     setupEventListeners() {
+        console.log('Setting up event listeners...');
+        
         // Tab navigation
         document.querySelectorAll('.tab-button').forEach(button => {
             button.addEventListener('click', (e) => {
-                this.switchTab(e.target.dataset.tab);
+                const tab = e.target.dataset.tab || e.target.closest('[data-tab]')?.dataset.tab;
+                if (tab) {
+                    this.switchTab(tab);
+                }
             });
         });
 
         // Dashboard actions
-        document.getElementById('refresh-status').addEventListener('click', () => {
-            this.refreshStatus();
-        });
+        const refreshBtn = document.getElementById('refresh-status');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                this.refreshStatus();
+            });
+        }
 
-        document.getElementById('wake-isg').addEventListener('click', () => {
-            this.wakeISG();
-        });
+        const wakeBtn = document.getElementById('wake-isg');
+        if (wakeBtn) {
+            wakeBtn.addEventListener('click', () => {
+                this.wakeISG();
+            });
+        }
 
-        document.getElementById('restart-isg').addEventListener('click', () => {
-            this.restartISG();
-        });
+        const restartBtn = document.getElementById('restart-isg');
+        if (restartBtn) {
+            restartBtn.addEventListener('click', () => {
+                this.restartISG();
+            });
+        }
 
         // App management
         document.getElementById('add-app-btn').addEventListener('click', () => {
@@ -90,17 +104,31 @@ class AndroidTVBoxManager {
     }
 
     switchTab(tabName) {
+        console.log('Switching to tab:', tabName);
+        
         // Update tab buttons
         document.querySelectorAll('.tab-button').forEach(button => {
             button.classList.remove('active');
         });
-        document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        
+        const activeButton = document.querySelector(`[data-tab="${tabName}"]`);
+        if (activeButton) {
+            activeButton.classList.add('active');
+        } else {
+            console.error('Tab button not found for:', tabName);
+        }
 
         // Update tab content
         document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.remove('active');
         });
-        document.getElementById(tabName).classList.add('active');
+        
+        const activeContent = document.getElementById(tabName);
+        if (activeContent) {
+            activeContent.classList.add('active');
+        } else {
+            console.error('Tab content not found for:', tabName);
+        }
 
         this.currentTab = tabName;
     }
@@ -381,18 +409,24 @@ class AndroidTVBoxManager {
     }
 
     async refreshStatus() {
+        console.log('refreshStatus() called');
         try {
             this.showLoading();
+            console.log('Fetching /api/status...');
             const response = await fetch('/api/status');
+            console.log('Response received:', response.status, response.statusText);
             const data = await response.json();
+            console.log('Response data:', data);
             
             if (data.success) {
                 this.updateStatusDisplay(data.data);
                 this.showToast('Status refreshed successfully!', 'success');
             } else {
+                console.error('API error:', data.error);
                 this.showToast('Error refreshing status: ' + data.error, 'error');
             }
         } catch (error) {
+            console.error('Fetch error:', error);
             this.showToast('Error refreshing status: ' + error.message, 'error');
         } finally {
             this.hideLoading();
@@ -400,28 +434,58 @@ class AndroidTVBoxManager {
     }
 
     updateStatusDisplay(status) {
+        console.log('Updating status display with:', status);
+        
         // Update connection status
         const connectionStatus = document.getElementById('connection-status');
-        if (status.adb_connected) {
-            connectionStatus.textContent = 'Online';
-            connectionStatus.className = 'status online';
-        } else {
-            connectionStatus.textContent = 'Offline';
-            connectionStatus.className = 'status offline';
+        if (connectionStatus) {
+            if (status.adb_connected) {
+                connectionStatus.textContent = 'Online';
+                connectionStatus.className = 'status online';
+            } else {
+                connectionStatus.textContent = 'Offline';
+                connectionStatus.className = 'status offline';
+            }
         }
 
         // Update device status
-        document.getElementById('device-power').textContent = status.device_powered_on ? 'On' : 'Off';
-        document.getElementById('wifi-status').textContent = status.wifi_enabled ? 'Enabled' : 'Disabled';
-        document.getElementById('current-app').textContent = status.current_app || 'Unknown';
-        document.getElementById('isg-status').textContent = status.isg_running ? 'Running' : 'Stopped';
-        document.getElementById('last-check').textContent = new Date(status.timestamp).toLocaleString();
+        const devicePower = document.getElementById('device-power');
+        if (devicePower) {
+            devicePower.textContent = status.device_powered_on ? 'On' : 'Off';
+        }
+        
+        const wifiStatus = document.getElementById('wifi-status');
+        if (wifiStatus) {
+            wifiStatus.textContent = status.wifi_enabled ? 'Enabled' : 'Disabled';
+        }
+        
+        const currentApp = document.getElementById('current-app');
+        if (currentApp) {
+            currentApp.textContent = status.current_app || 'Unknown';
+        }
+        
+        const isgStatus = document.getElementById('isg-status');
+        if (isgStatus) {
+            isgStatus.textContent = status.isg_running ? 'Running' : 'Stopped';
+        }
+        
+        const lastCheck = document.getElementById('last-check');
+        if (lastCheck) {
+            lastCheck.textContent = new Date(status.timestamp).toLocaleString();
+        }
     }
 
     async wakeISG() {
+        console.log('Wake iSG button clicked');
         try {
             this.showLoading();
             const response = await fetch('/api/wake-isg', { method: 'POST' });
+            
+            if (response.status === 404) {
+                this.showToast('iSG wake function not yet implemented', 'warning');
+                return;
+            }
+            
             const data = await response.json();
             
             if (data.success) {
@@ -431,6 +495,7 @@ class AndroidTVBoxManager {
                 this.showToast('Error waking up iSG: ' + data.error, 'error');
             }
         } catch (error) {
+            console.error('Wake iSG error:', error);
             this.showToast('Error waking up iSG: ' + error.message, 'error');
         } finally {
             this.hideLoading();
@@ -440,9 +505,16 @@ class AndroidTVBoxManager {
     async restartISG() {
         if (!confirm('Are you sure you want to restart iSG?')) return;
 
+        console.log('Restart iSG button clicked');
         try {
             this.showLoading();
             const response = await fetch('/api/restart-isg', { method: 'POST' });
+            
+            if (response.status === 404) {
+                this.showToast('iSG restart function not yet implemented', 'warning');
+                return;
+            }
+            
             const data = await response.json();
             
             if (data.success) {
@@ -452,6 +524,7 @@ class AndroidTVBoxManager {
                 this.showToast('Error restarting iSG: ' + data.error, 'error');
             }
         } catch (error) {
+            console.error('Restart iSG error:', error);
             this.showToast('Error restarting iSG: ' + error.message, 'error');
         } finally {
             this.hideLoading();
@@ -545,7 +618,14 @@ class AndroidTVBoxManager {
     }
 
     showToast(message, type = 'info') {
+        console.log('Toast:', type, message);
         const toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            console.error('toast-container not found');
+            // Fallback to console log if no toast container
+            return;
+        }
+        
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
         

@@ -8,9 +8,24 @@ This is a Home Assistant custom integration that controls Android TV boxes throu
 
 ## Commands
 
+### Setup and Deployment
+```bash
+# Initial Android setup (run on Termux as root)
+./setup_android.sh
+
+# Ubuntu container setup (run in proot-distro Ubuntu)
+./setup_ubuntu.sh
+
+# Deploy integration to Home Assistant
+./deploy.sh
+
+# Prepare release for HACS
+./release.sh
+```
+
 ### Testing
 ```bash
-# Test ADB connection
+# Comprehensive ADB connection test
 python3 test_adb_connection.py
 
 # Test from Ubuntu container environment
@@ -18,34 +33,28 @@ source ~/uiauto_env/bin/activate
 python3 test_adb_connection.py
 ```
 
-### Deployment
-```bash
-# Deploy to Home Assistant
-./deploy.sh
-
-# Setup Android environment
-./setup_android.sh
-
-# Setup Ubuntu container environment
-./setup_ubuntu.sh
-```
-
 ### Development
 ```bash
 # Install dependencies
 pip install -r requirements.txt
 
-# Check ADB connection manually
+# Manual ADB connection check
 adb connect 127.0.0.1:5555
 adb devices
+
+# Check Home Assistant container status
+docker ps | grep homeassistant
+
+# View Home Assistant logs
+docker logs homeassistant -f
 ```
 
 ## Architecture
 
 ### Environment Structure
 - **Android Host**: Termux application with root access
-- **Ubuntu Container**: proot-distro Ubuntu container within Termux
-- **Home Assistant**: Runs inside Ubuntu container
+- **Ubuntu Container**: proot-distro Ubuntu container within Termux (alternative deployment)
+- **Home Assistant**: Runs in Docker container (current setup) or Ubuntu container
 - **ADB Connection**: 127.0.0.1:5555 (local TCP connection)
 
 ### Component Structure
@@ -71,7 +80,9 @@ custom_components/android_tv_box/
 ### Key Dependencies
 - `uiautomator2>=2.16.23` - Android UI automation
 - `aiohttp>=3.8.0` - Web server for management interface
+- `aiohttp-cors>=0.7.0` - CORS support for web interface
 - `paho-mqtt>=1.6.0` - MQTT support
+- `voluptuous>=0.13.0` - Configuration validation
 
 ### ADB Service Architecture
 The `ADBService` class in `adb_service.py` handles all ADB operations:
@@ -128,23 +139,36 @@ Available at `http://localhost:3003` when Home Assistant is running. Provides:
 - Configuration updates
 - Connection testing
 
+## Development Workflow
+
+### Initial Setup Process
+1. Run `./setup_android.sh` on Termux (requires root)
+2. Install Ubuntu container or ensure Docker is available
+3. Run `./setup_ubuntu.sh` in Ubuntu container (if using container deployment)
+4. Deploy integration using `./deploy.sh`
+5. Test connection with `python3 test_adb_connection.py`
+
+### Configuration Flow
+- Integration supports both UI configuration (config_flow.py) and configuration.yaml
+- Auto-imports from configuration.yaml on first setup
+- Web management interface available at http://localhost:3003
+
+### Release Process
+- Update version in manifest.json
+- Run `./release.sh` to validate and prepare release
+- Create git tag and GitHub release for HACS distribution
+
 ## Development Notes
 
-### ADB Connection Requirements
-- Android device must be rooted
-- ADB TCP service must be running on port 5555
+### Environment Requirements
+- Android device with root access and ADB TCP service on port 5555
+- Home Assistant running in Docker container or Ubuntu container
 - Connection is local only (127.0.0.1)
 
 ### Performance Considerations
-- Screenshot intervals are configurable (default 3 seconds)
-- Performance monitoring runs every 500ms by default
-- CPU threshold monitoring with configurable alerts
-- Command rate limiting in ADB service
-
-### Error Handling
-- ADB connection recovery mechanisms
-- Graceful degradation when ADB unavailable
-- Extensive logging for debugging
+- Screenshot intervals configurable (default 3 seconds)
+- Performance monitoring every 500ms with CPU threshold alerts
+- Command rate limiting and connection recovery in ADB service
 
 ### Platform Integration
 All entities support standard Home Assistant features:

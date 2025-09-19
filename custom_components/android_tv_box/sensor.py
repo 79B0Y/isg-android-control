@@ -1,6 +1,7 @@
 """Sensor platform for Android TV Box integration."""
 import logging
 from typing import Any, Dict, List, Optional
+from datetime import timedelta
 
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
@@ -14,7 +15,7 @@ from .adb_service import ADBService
 
 _LOGGER = logging.getLogger(__name__)
 
-SCAN_INTERVAL = 10  # seconds
+SCAN_INTERVAL = timedelta(seconds=10)
 
 
 class AndroidTVBoxSensorCoordinator(DataUpdateCoordinator):
@@ -283,7 +284,7 @@ class AndroidTVBoxCPUUsageSensor(SensorEntity):
     _attr_has_entity_name = True
     _attr_name = "CPU Usage"
     _attr_native_unit_of_measurement = PERCENTAGE
-    _attr_device_class = SensorDeviceClass.CPU_USAGE
+    _attr_device_class = None  # CPU_USAGE not available in this HA version
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator: AndroidTVBoxSensorCoordinator, config: Dict[str, Any]):

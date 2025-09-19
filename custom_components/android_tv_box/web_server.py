@@ -76,8 +76,11 @@ class AndroidTVBoxWebServer:
 
     def _setup_routes(self):
         """Setup web routes."""
+        # Root route to serve index.html
+        self.app.router.add_get('/', self._serve_index)
+        
         # Static files
-        self.app.router.add_static('/', path=os.path.join(os.path.dirname(__file__), 'web'), name='static')
+        self.app.router.add_static('/static', path=os.path.join(os.path.dirname(__file__), 'web'), name='static')
         
         # API routes
         self.app.router.add_get('/api/config', self._get_config)
@@ -90,11 +93,41 @@ class AndroidTVBoxWebServer:
         self.app.router.add_post('/api/test-connection', self._test_connection)
         self.app.router.add_post('/api/test-mqtt', self._test_mqtt)
         self.app.router.add_post('/api/restart-ha', self._restart_ha)
+        self.app.router.add_post('/api/wake-isg', self._wake_isg)
+        self.app.router.add_post('/api/restart-isg', self._restart_isg)
+
+    async def _serve_index(self, request: Request) -> Response:
+        """Serve the main index.html file."""
+        try:
+            index_path = os.path.join(os.path.dirname(__file__), 'web', 'index.html')
+            with open(index_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return web.Response(text=content, content_type='text/html')
+        except Exception as e:
+            _LOGGER.error(f"Error serving index: {e}")
+            return web.Response(text="Error loading page", status=500)
 
     async def _get_config(self, request: Request) -> Response:
         """Get current configuration."""
         try:
             config = get_config(self.hass)
+            if config is None:
+                config = {}
+            # Convert mappingproxy to dict if needed
+            if hasattr(config, '_data'):
+                config = dict(config._data)
+            elif not isinstance(config, dict):
+                config = dict(config)
+            
+            # Also try to get configuration from YAML
+            from .config import DOMAIN
+            yaml_config = self.hass.data.get(DOMAIN, {}).get('yaml_config', {})
+            if yaml_config:
+                # Merge YAML config with entry config
+                for key, value in yaml_config.items():
+                    if key not in config:
+                        config[key] = value
+            
             return web.json_response({
                 "success": True,
                 "data": config
@@ -143,6 +176,23 @@ class AndroidTVBoxWebServer:
         """Get configured apps."""
         try:
             config = get_config(self.hass)
+            if config is None:
+                config = {}
+            # Convert mappingproxy to dict if needed
+            if hasattr(config, '_data'):
+                config = dict(config._data)
+            elif not isinstance(config, dict):
+                config = dict(config)
+            
+            # Also try to get configuration from YAML
+            from .config import DOMAIN
+            yaml_config = self.hass.data.get(DOMAIN, {}).get('yaml_config', {})
+            if yaml_config:
+                # Merge YAML config with entry config
+                for key, value in yaml_config.items():
+                    if key not in config:
+                        config[key] = value
+                
             apps = config.get('apps', {})
             visible = config.get('visible', [])
             
@@ -443,6 +493,72 @@ class AndroidTVBoxWebServer:
         """Restart Home Assistant."""
         await asyncio.sleep(2)  # Give time for response
         self.hass.async_create_task(self.hass.async_stop())
+
+    async def _wake_isg(self, request: Request) -> Response:
+        """Wake up iSG application."""
+        try:
+            adb_service = get_adb_service(self.hass)
+            if not adb_service:
+                return web.json_response({
+                    "success": False,
+                    "error": "ADB service not available"
+                }, status=500)
+            
+            # Wake up iSG by launching it
+            success = await adb_service.launch_app("com.linknlink.app.device.isg")
+            
+            if success:
+                return web.json_response({
+                    "success": True,
+                    "message": "iSG wake up initiated"
+                })
+            else:
+                return web.json_response({
+                    "success": False,
+                    "error": "Failed to wake up iSG"
+                })
+                
+        except Exception as e:
+            _LOGGER.error(f"Error waking iSG: {e}")
+            return web.json_response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
+
+    async def _restart_isg(self, request: Request) -> Response:
+        """Restart iSG application."""
+        try:
+            adb_service = get_adb_service(self.hass)
+            if not adb_service:
+                return web.json_response({
+                    "success": False,
+                    "error": "ADB service not available"
+                }, status=500)
+            
+            # Stop iSG
+            await adb_service.force_stop_app("com.linknlink.app.device.isg")
+            await asyncio.sleep(2)
+            
+            # Start iSG
+            success = await adb_service.launch_app("com.linknlink.app.device.isg")
+            
+            if success:
+                return web.json_response({
+                    "success": True,
+                    "message": "iSG restart initiated"
+                })
+            else:
+                return web.json_response({
+                    "success": False,
+                    "error": "Failed to restart iSG"
+                })
+                
+        except Exception as e:
+            _LOGGER.error(f"Error restarting iSG: {e}")
+            return web.json_response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
 
     async def _save_config_to_file(self, config: Dict[str, Any]):
         """Save configuration to file."""

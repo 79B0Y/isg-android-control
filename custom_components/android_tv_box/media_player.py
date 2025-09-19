@@ -1,6 +1,7 @@
 """Media Player platform for Android TV Box integration."""
 import logging
 from typing import Any, Dict, List, Optional
+from datetime import timedelta
 
 from homeassistant.components.media_player import (
     MediaPlayerEntity,
@@ -19,7 +20,7 @@ from .adb_service import ADBService
 
 _LOGGER = logging.getLogger(__name__)
 
-SCAN_INTERVAL = 10  # seconds
+SCAN_INTERVAL = timedelta(seconds=10)
 
 
 class AndroidTVBoxCoordinator(DataUpdateCoordinator):

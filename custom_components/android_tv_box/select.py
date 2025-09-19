@@ -1,6 +1,7 @@
 """Select platform for Android TV Box integration."""
 import logging
 from typing import Any, Dict, List, Optional
+from datetime import timedelta
 
 from homeassistant.components.select import SelectEntity
 from homeassistant.config_entries import ConfigEntry
@@ -13,7 +14,7 @@ from .adb_service import ADBService
 
 _LOGGER = logging.getLogger(__name__)
 
-SCAN_INTERVAL = 10  # seconds
+SCAN_INTERVAL = timedelta(seconds=10)
 
 
 class AndroidTVBoxSelectCoordinator(DataUpdateCoordinator):
