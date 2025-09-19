@@ -221,7 +221,8 @@ class AndroidTVBoxISGRunningSensor(BinarySensorEntity):
 
     _attr_has_entity_name = True
     _attr_name = "iSG Running"
-    _attr_device_class = BinarySensorDeviceClass.RUNNING
+    # RUNNING device class is not available in older HA versions; keep None for compatibility
+    _attr_device_class = None
 
     def __init__(self, coordinator: AndroidTVBoxBinarySensorCoordinator, config: Dict[str, Any]):
         """Initialize the iSG running sensor."""

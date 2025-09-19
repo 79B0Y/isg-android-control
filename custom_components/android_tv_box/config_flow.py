@@ -38,25 +38,16 @@ class AndroidTVBoxConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(f"{user_input['host']}:{user_input['port']}")
             self._abort_if_unique_id_configured()
 
-            # Test ADB connection
+            # Create the entry without blocking on live ADB connectivity.
+            # Connectivity will be handled by the integration after setup and
+            # can be adjusted via the web console.
             try:
-                adb_service = ADBService(
-                    host=user_input["host"],
-                    port=user_input["port"],
-                    adb_path=user_input.get("adb_path", "/usr/bin/adb")
+                return self.async_create_entry(
+                    title=user_input["name"],
+                    data=user_input,
                 )
-
-                connected = await adb_service.connect()
-                if connected:
-                    await adb_service.disconnect()
-                    return self.async_create_entry(
-                        title=user_input["name"],
-                        data=user_input,
-                    )
-                else:
-                    errors["base"] = "cannot_connect"
             except Exception as exc:
-                _LOGGER.error("Error testing ADB connection: %s", exc)
+                _LOGGER.error("Error creating config entry: %s", exc)
                 errors["base"] = "unknown"
 
         return self.async_show_form(
