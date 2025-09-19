@@ -1,113 +1,216 @@
 """ADB connection service for Android TV Box integration."""
+from __future__ import annotations
+
 import asyncio
 import logging
-import subprocess
 import time
-from typing import Optional, Dict, Any, List
 from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from adb_shell.adb_device import AdbDeviceTcp
+from adb_shell.auth.keygen import keygen
+from adb_shell.auth.sign_pythonrsa import PythonRSASigner
+from adb_shell.exceptions import AdbAuthError, AdbConnectionError, AdbTimeoutError
 
 _LOGGER = logging.getLogger(__name__)
+
+DEFAULT_ADB_KEY_PATH = Path.home() / ".android" / "adbkey"
 
 
 class ADBConnectionError(Exception):
     """Exception raised for ADB connection errors."""
-    pass
+
+
+class ADBKeyError(ADBConnectionError):
+    """Exception raised when local ADB keys cannot be prepared."""
 
 
 class ADBService:
     """Service for managing ADB connections and executing commands."""
 
-    def __init__(self, host: str, port: int, adb_path: str = "/usr/bin/adb"):
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        *,
+        adb_key_path: Optional[str] = None,
+        auth_timeout: float = 10.0,
+        transport_timeout: float = 10.0,
+    ) -> None:
         """Initialize ADB service."""
+
         self.host = host
         self.port = port
-        self.adb_path = adb_path
         self.device_address = f"{host}:{port}"
         self._connected = False
-        self._last_command_time = 0
+        self._last_command_time = 0.0
         self._command_delay = 0.1  # Minimum delay between commands
+        self._auth_timeout = auth_timeout
+        self._transport_timeout = transport_timeout
+        self._adb_key_path = Path(adb_key_path).expanduser() if adb_key_path else DEFAULT_ADB_KEY_PATH
+        self._rsa_keys: Optional[List[PythonRSASigner]] = None
+        self._device: Optional[AdbDeviceTcp] = None
+        self._lock = asyncio.Lock()
 
     async def connect(self) -> bool:
         """Connect to ADB device."""
-        try:
-            # Connect to device
-            result = await self._run_command(["connect", self.device_address])
-            if "connected" in result.lower() or "already connected" in result.lower():
-                self._connected = True
-                _LOGGER.info(f"Connected to Android device at {self.device_address}")
-                return True
-            else:
-                _LOGGER.error(f"Failed to connect to {self.device_address}: {result}")
-                return False
-        except Exception as e:
-            _LOGGER.error(f"ADB connection error: {e}")
-            return False
 
-    async def disconnect(self):
+        async with self._lock:
+            if self._connected and self._device:
+                return True
+
+            rsa_keys = await asyncio.to_thread(self._prepare_rsa_keys)
+            device = AdbDeviceTcp(
+                self.host,
+                self.port,
+                default_transport_timeout_s=self._transport_timeout,
+            )
+
+            try:
+                await asyncio.to_thread(
+                    device.connect,
+                    rsa_keys=rsa_keys,
+                    auth_timeout_s=self._auth_timeout,
+                )
+            except ADBKeyError:
+                raise
+            except AdbAuthError as err:
+                self._connected = False
+                self._device = None
+                _LOGGER.error("ADB authentication failed for %s: %s", self.device_address, err)
+                raise
+            except (AdbConnectionError, AdbTimeoutError, OSError) as err:
+                self._connected = False
+                self._device = None
+                _LOGGER.error("Unable to connect to %s: %s", self.device_address, err)
+                raise ADBConnectionError(str(err)) from err
+
+            self._device = device
+            self._connected = True
+            _LOGGER.info("Connected to Android device at %s", self.device_address)
+            return True
+
+    async def disconnect(self) -> None:
         """Disconnect from ADB device."""
-        try:
-            await self._run_command(["disconnect", self.device_address])
+
+        async with self._lock:
+            if not self._device:
+                self._connected = False
+                return
+
+            try:
+                await asyncio.to_thread(self._device.close)
+            except Exception as err:  # pragma: no cover - defensive logging
+                _LOGGER.debug("Error closing ADB connection: %s", err)
+
+            self._device = None
             self._connected = False
-            _LOGGER.info(f"Disconnected from {self.device_address}")
-        except Exception as e:
-            _LOGGER.error(f"Error disconnecting from ADB: {e}")
+            _LOGGER.info("Disconnected from %s", self.device_address)
 
     async def is_connected(self) -> bool:
         """Check if device is connected."""
-        try:
-            result = await self._run_command(["devices"])
-            return self.device_address in result and "device" in result
-        except Exception:
-            return False
+
+        async with self._lock:
+            if not self._device:
+                return False
+
+            try:
+                return bool(await asyncio.to_thread(lambda: self._device is not None and self._device.available))
+            except Exception as err:
+                _LOGGER.debug("ADB availability check failed: %s", err)
+                self._device = None
+                self._connected = False
+                return False
 
     async def shell_command(self, command: str, timeout: int = 10) -> str:
         """Execute shell command on device."""
-        if not self._connected:
-            if not await self.connect():
-                raise ADBConnectionError("Device not connected")
+
+        await self._ensure_connection()
 
         # Add delay between commands to avoid overwhelming the device
         current_time = time.time()
         if current_time - self._last_command_time < self._command_delay:
             await asyncio.sleep(self._command_delay - (current_time - self._last_command_time))
-        
+
         self._last_command_time = time.time()
 
-        try:
-            cmd = ["-s", self.device_address, "shell"] + command.split()
-            result = await self._run_command(cmd, timeout=timeout)
-            return result.strip()
-        except subprocess.TimeoutExpired:
-            _LOGGER.error(f"ADB command timeout: {command}")
-            raise ADBConnectionError(f"Command timeout: {command}")
-        except Exception as e:
-            _LOGGER.error(f"ADB command error: {e}")
-            raise ADBConnectionError(f"Command failed: {command}")
+        if not self._device:
+            raise ADBConnectionError("Device not connected")
 
-    async def _run_command(self, cmd: List[str], timeout: int = 10) -> str:
-        """Run ADB command."""
-        full_cmd = [self.adb_path] + cmd
-        _LOGGER.debug(f"Running ADB command: {' '.join(full_cmd)}")
-        
-        process = await asyncio.create_subprocess_exec(
-            *full_cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        
         try:
-            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
-            result = stdout.decode('utf-8', errors='ignore')
-            
-            if process.returncode != 0:
-                error_msg = stderr.decode('utf-8', errors='ignore')
-                _LOGGER.error(f"ADB command failed: {error_msg}")
-                raise ADBConnectionError(f"Command failed: {error_msg}")
-            
-            return result
-        except asyncio.TimeoutError:
-            process.kill()
-            raise subprocess.TimeoutExpired(full_cmd, timeout)
+            result = await asyncio.to_thread(
+                self._device.shell,
+                command,
+                transport_timeout_s=timeout,
+            )
+        except AdbTimeoutError as err:
+            _LOGGER.error("ADB command timeout: %s", command)
+            raise ADBConnectionError(f"Command timeout: {command}") from err
+        except (AdbConnectionError, OSError) as err:
+            _LOGGER.error("ADB command error for %s: %s", command, err)
+            self._connected = False
+            self._device = None
+            raise ADBConnectionError(f"Command failed: {command}") from err
+
+        return result.strip()
+
+    async def pull_file(self, remote_path: str, local_path: str, timeout: int = 30) -> bool:
+        """Pull a file from the device."""
+
+        await self._ensure_connection()
+
+        if not self._device:
+            raise ADBConnectionError("Device not connected")
+
+        try:
+            await asyncio.to_thread(
+                self._device.pull,
+                remote_path,
+                local_path,
+                progress_callback=None,
+                transport_timeout_s=timeout,
+            )
+            return True
+        except (AdbConnectionError, AdbTimeoutError, OSError) as err:
+            _LOGGER.error("Failed to pull %s: %s", remote_path, err)
+            self._connected = False
+            self._device = None
+            raise ADBConnectionError(f"Failed to pull file: {remote_path}") from err
+
+    async def _ensure_connection(self) -> None:
+        """Ensure there is an active connection to the device."""
+
+        if self._connected and self._device:
+            return
+
+        await self.connect()
+
+    def _prepare_rsa_keys(self) -> List[PythonRSASigner]:
+        """Load or generate local RSA keys for ADB authentication."""
+
+        if self._rsa_keys is not None:
+            return self._rsa_keys
+
+        key_path = self._adb_key_path
+        try:
+            key_path.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as err:
+            raise ADBKeyError(f"Unable to create ADB key directory: {key_path.parent}") from err
+
+        try:
+            pub_path = Path(f"{key_path}.pub")
+            if not key_path.exists() or not pub_path.exists():
+                keygen(str(key_path))
+
+            private_key = key_path.read_text()
+            public_key = pub_path.read_text()
+            signer = PythonRSASigner.FromRSAKeyPair(private_key, public_key)
+        except Exception as err:
+            raise ADBKeyError(f"Unable to prepare ADB keys at {key_path}") from err
+
+        self._rsa_keys = [signer]
+        return self._rsa_keys
 
     # Media Player Commands
     async def media_play(self) -> bool:

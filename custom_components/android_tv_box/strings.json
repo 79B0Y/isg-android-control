@@ -7,13 +7,14 @@
         "data": {
           "host": "Host",
           "port": "Port",
-          "name": "Name",
-          "adb_path": "ADB Path"
+          "name": "Name"
         }
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect to Android device. Check that ADB is enabled and the device is accessible.",
+      "adb_not_found": "Home Assistant could not create ADB keys. Check file permissions or configure a custom key path.",
+      "adb_auth_failed": "Authentication failed. Unlock the device and accept the ADB debugging prompt.",
+      "cannot_connect": "Failed to connect to the Android device. Verify network debugging is enabled and reachable.",
       "unknown": "Unexpected error occurred"
     },
     "abort": {
