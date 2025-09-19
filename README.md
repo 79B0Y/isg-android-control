@@ -201,7 +201,7 @@ android_tv_box:
 ### Home Assistant Environment
 - **Home Assistant**: Version 2023.1.0 or higher
 - **Ubuntu Container**: Home Assistant running in Ubuntu container (proot-distro)
-- **Python Dependencies**: Automatically installed via integration
+- **Python Dependencies**: Install with `pip install -r requirements.txt` (ensure internet access or use a pre-downloaded `adb-shell` wheel).
 
 ## 📖 Usage Examples
 
