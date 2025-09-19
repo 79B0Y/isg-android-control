@@ -1,5 +1,9 @@
 # Android TV Box Integration
 
+<p align="left">
+  <img src="custom_components/android_tv_box/web/logo.jpg" alt="LinknLink" height="36" />
+</p>
+
 [![hacs][hacsbadge]][hacs]
 ![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1.0+-green.svg)
