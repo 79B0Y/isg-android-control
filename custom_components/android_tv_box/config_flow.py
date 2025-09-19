@@ -3,7 +3,7 @@ import logging
 from typing import Any, Dict, Optional
 
 import voluptuous as vol
-from adb_shell.exceptions import AdbAuthError, AdbConnectionError, AdbTimeoutError
+from adb_shell import exceptions as adb_exceptions
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_validation as cv
@@ -13,6 +13,22 @@ from .adb_service import ADBKeyError, ADBService
 from .config import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+AdbAuthError = getattr(
+    adb_exceptions,
+    "AdbAuthError",
+    getattr(adb_exceptions, "AuthenticationError", adb_exceptions.AdbError),
+)
+AdbConnectionError = getattr(
+    adb_exceptions,
+    "AdbConnectionError",
+    getattr(adb_exceptions, "ConnectionError", adb_exceptions.AdbError),
+)
+AdbTimeoutError = getattr(
+    adb_exceptions,
+    "AdbTimeoutError",
+    getattr(adb_exceptions, "TcpTimeoutException", adb_exceptions.AdbError),
+)
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {

@@ -3,7 +3,7 @@ import asyncio
 import logging
 from typing import Any, Dict, Optional
 
-from adb_shell.exceptions import AdbAuthError
+from adb_shell import exceptions as adb_exceptions
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
@@ -12,6 +12,12 @@ from .adb_service import ADBConnectionError, ADBKeyError, ADBService
 from .config import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+AdbAuthError = getattr(
+    adb_exceptions,
+    "AdbAuthError",
+    getattr(adb_exceptions, "AuthenticationError", adb_exceptions.AdbError),
+)
 
 PLATFORMS = [
     Platform.MEDIA_PLAYER,
