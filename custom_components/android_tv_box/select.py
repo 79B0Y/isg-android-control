@@ -35,25 +35,33 @@ class AndroidTVBoxSelectCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self) -> Dict[str, Any]:
         """Update data via library."""
+        # Default data structure
+        data = {
+            "current_app": "Unknown",
+            "current_app_name": None
+        }
+        
         try:
-            data = {}
-            
             # Get current app
-            current_app = await self.adb_service.get_current_app()
-            data["current_app"] = current_app
-            
-            # Find current app name from package name
-            current_app_name = None
-            for app_name, package_name in self.apps.items():
-                if package_name == current_app:
-                    current_app_name = app_name
-                    break
-            
-            data["current_app_name"] = current_app_name
+            try:
+                current_app = await self.adb_service.get_current_app()
+                data["current_app"] = current_app
+                
+                # Find current app name from package name
+                current_app_name = None
+                for app_name, package_name in self.apps.items():
+                    if package_name == current_app:
+                        current_app_name = app_name
+                        break
+                
+                data["current_app_name"] = current_app_name
+            except Exception as e:
+                _LOGGER.warning(f"Failed to get current app: {e}")
             
             return data
         except Exception as err:
-            raise UpdateFailed(f"Error communicating with Android TV Box: {err}")
+            _LOGGER.error(f"Error communicating with Android TV Box: {err}")
+            return data  # Return default data instead of raising exception
 
 
 async def async_setup_entry(
@@ -87,13 +95,20 @@ class AndroidTVBoxAppSelect(SelectEntity):
         """Initialize the app select."""
         self.coordinator = coordinator
         self.config = config
-        self.apps = config.get("apps", {})
-        self.visible_apps = config.get("visible", [])
+        
+        # Use apps and visible_apps from coordinator, which has the correct config
+        self.apps = coordinator.apps
+        self.visible_apps = coordinator.visible_apps
+        
+        _LOGGER.info(f"Select entity initialized with apps: {self.apps}")
+        _LOGGER.info(f"Select entity initialized with visible apps: {self.visible_apps}")
+        _LOGGER.info(f"Coordinator config apps: {coordinator.config.get('apps', {})}")
+        _LOGGER.info(f"Coordinator config visible: {coordinator.config.get('visible', [])}")
         self._attr_unique_id = f"android_tv_box_app_select_{config.get('host', '127.0.0.1')}_{config.get('port', 5555)}"
         self._attr_device_info = {
             "identifiers": {("android_tv_box", f"android_tv_box_{config.get('host', '127.0.0.1')}_{config.get('port', 5555)}")},
             "name": config.get("name", "Android TV Box"),
-            "manufacturer": "Android",
+            "manufacturer": "LinknLink",
             "model": "TV Box",
         }
 
@@ -102,32 +117,55 @@ class AndroidTVBoxAppSelect(SelectEntity):
         """Return a list of available options."""
         if self.visible_apps:
             # Return only visible apps
-            return [app for app in self.visible_apps if app in self.apps]
+            options = [app for app in self.visible_apps if app in self.apps]
         else:
             # Return all configured apps
-            return list(self.apps.keys())
+            options = list(self.apps.keys())
+        
+        _LOGGER.info(f"Select options: {options}")
+        return options
 
     @property
     def current_option(self) -> Optional[str]:
         """Return the current selected option."""
-        return self.coordinator.data.get("current_app_name")
+        if not self.coordinator.data:
+            return None
+        
+        current_app = self.coordinator.data.get("current_app")
+        if not current_app:
+            return None
+        
+        # Find app name from package name
+        for app_name, package_name in self.apps.items():
+            if package_name == current_app:
+                _LOGGER.info(f"Current app: {app_name} ({package_name})")
+                return app_name
+        
+        _LOGGER.warning(f"Unknown app package: {current_app}")
+        return None
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
+        _LOGGER.info(f"📱 SELECT OPTION CALLED: {option}")
+        _LOGGER.info(f"Available apps: {list(self.apps.keys())}")
+        
         if option not in self.apps:
-            _LOGGER.error(f"Unknown app: {option}")
+            _LOGGER.error(f"❌ Unknown app: {option}, available apps: {list(self.apps.keys())}")
             return
 
         package_name = self.apps[option]
-        _LOGGER.info(f"Launching app: {option} ({package_name})")
+        _LOGGER.info(f"🚀 Launching app: {option} ({package_name})")
         
-        success = await self.coordinator.adb_service.launch_app(package_name)
-        if success:
-            _LOGGER.info(f"Successfully launched {option}")
-            # Update coordinator data immediately
-            await self.coordinator.async_request_refresh()
-        else:
-            _LOGGER.error(f"Failed to launch {option}")
+        try:
+            success = await self.coordinator.adb_service.launch_app(package_name)
+            if success:
+                _LOGGER.info(f"✅ Successfully launched {option}")
+                # Update coordinator data immediately
+                await self.coordinator.async_request_refresh()
+            else:
+                _LOGGER.error(f"❌ Failed to launch {option}")
+        except Exception as e:
+            _LOGGER.error(f"💥 Exception launching {option}: {e}")
 
     async def async_added_to_hass(self) -> None:
         """When entity is added to hass."""

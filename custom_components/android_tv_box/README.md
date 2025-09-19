@@ -12,7 +12,7 @@ This integration allows you to control your Android TV Box through Home Assistan
 2. **Add Custom Repository**
    - Open HACS → Integrations
    - Click the three dots menu → Custom repositories
-   - Add repository: `https://github.com/your-username/android-tv-box`
+   - Add repository: `https://github.com/bobo/android-tv-box`
    - Category: Integration
 
 3. **Install Integration**
@@ -30,7 +30,7 @@ This integration allows you to control your Android TV Box through Home Assistan
 1. **Download the integration**
    ```bash
    cd /config/custom_components
-   git clone https://github.com/your-username/android-tv-box.git android_tv_box
+   git clone https://github.com/bobo/android-tv-box.git android_tv_box
    ```
 
 2. **Restart Home Assistant**

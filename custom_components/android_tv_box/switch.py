@@ -33,20 +33,39 @@ class AndroidTVBoxSwitchCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self) -> Dict[str, Any]:
         """Update data via library."""
+        # Default data structure
+        data = {
+            "power_on": False,
+            "wifi_on": False,
+            "adb_connected": False
+        }
+        
         try:
-            data = {}
-            
             # Check if device is powered on
-            is_on = await self.adb_service.is_powered_on()
-            data["power_on"] = is_on
+            try:
+                is_on = await self.adb_service.is_powered_on()
+                data["power_on"] = is_on
+            except Exception as e:
+                _LOGGER.warning(f"Failed to get power status: {e}")
             
             # Check WiFi status
-            wifi_on = await self.adb_service.is_wifi_on()
-            data["wifi_on"] = wifi_on
+            try:
+                wifi_on = await self.adb_service.is_wifi_on()
+                data["wifi_on"] = wifi_on
+            except Exception as e:
+                _LOGGER.warning(f"Failed to get WiFi status: {e}")
+            
+            # Check ADB connection status
+            try:
+                adb_connected = await self.adb_service.is_connected()
+                data["adb_connected"] = adb_connected
+            except Exception as e:
+                _LOGGER.warning(f"Failed to get ADB connection status: {e}")
             
             return data
         except Exception as err:
-            raise UpdateFailed(f"Error communicating with Android TV Box: {err}")
+            _LOGGER.error(f"Error communicating with Android TV Box: {err}")
+            return data  # Return default data instead of raising exception
 
 
 async def async_setup_entry(
@@ -69,6 +88,7 @@ async def async_setup_entry(
     entities = [
         AndroidTVBoxPowerSwitch(coordinator, config),
         AndroidTVBoxWiFiSwitch(coordinator, config),
+        AndroidTVBoxADBSwitch(coordinator, config),
     ]
     
     async_add_entities(entities)
@@ -88,7 +108,7 @@ class AndroidTVBoxPowerSwitch(SwitchEntity):
         self._attr_device_info = {
             "identifiers": {("android_tv_box", f"android_tv_box_{config.get('host', '127.0.0.1')}_{config.get('port', 5555)}")},
             "name": config.get("name", "Android TV Box"),
-            "manufacturer": "Android",
+            "manufacturer": "LinknLink",
             "model": "TV Box",
         }
 
@@ -141,7 +161,7 @@ class AndroidTVBoxWiFiSwitch(SwitchEntity):
         self._attr_device_info = {
             "identifiers": {("android_tv_box", f"android_tv_box_{config.get('host', '127.0.0.1')}_{config.get('port', 5555)}")},
             "name": config.get("name", "Android TV Box"),
-            "manufacturer": "Android",
+            "manufacturer": "LinknLink",
             "model": "TV Box",
         }
 
@@ -178,3 +198,61 @@ class AndroidTVBoxWiFiSwitch(SwitchEntity):
     def available(self) -> bool:
         """Return True if entity is available."""
         return self.coordinator.last_update_success
+
+
+class AndroidTVBoxADBSwitch(SwitchEntity):
+    """Representation of an Android TV Box ADB connection switch."""
+
+    _attr_has_entity_name = True
+    _attr_name = "ADB Connection"
+
+    def __init__(self, coordinator: AndroidTVBoxSwitchCoordinator, config: Dict[str, Any]):
+        """Initialize the ADB connection switch."""
+        self.coordinator = coordinator
+        self.config = config
+        self._attr_unique_id = f"android_tv_box_adb_{config.get('host', '127.0.0.1')}_{config.get('port', 5555)}"
+        self._attr_device_info = {
+            "identifiers": {("android_tv_box", f"android_tv_box_{config.get('host', '127.0.0.1')}_{config.get('port', 5555)}")},
+            "name": config.get("name", "Android TV Box"),
+            "manufacturer": "LinknLink",
+            "model": "TV Box",
+        }
+
+    @property
+    def is_on(self) -> bool:
+        """Return true if ADB is connected."""
+        return self.coordinator.data.get("adb_connected", False)
+
+    @property
+    def icon(self) -> str:
+        """Return the icon for the switch."""
+        return "mdi:connection" if self.is_on else "mdi:lan-disconnect"
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Connect ADB."""
+        await self.coordinator.adb_service.connect()
+        await self.coordinator.async_request_refresh()
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Disconnect ADB."""
+        await self.coordinator.adb_service.disconnect()
+        await self.coordinator.async_request_refresh()
+
+    async def async_added_to_hass(self) -> None:
+        """When entity is added to hass."""
+        await super().async_added_to_hass()
+        self.coordinator.async_add_listener(self._handle_coordinator_update)
+
+    async def async_will_remove_from_hass(self) -> None:
+        """When entity will be removed from hass."""
+        await super().async_will_remove_from_hass()
+        self.coordinator.async_remove_listener(self._handle_coordinator_update)
+
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self.async_write_ha_state()
+
+    @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        return True  # ADB switch should always be available

@@ -1,324 +1,125 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Android TV Box Management</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Android TV Box Console</title>
+  <meta http-equiv="Cache-Control" content="no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <link rel="stylesheet" href="/static/style.css?v=1.3.0" />
 </head>
 <body>
-    <div class="container">
-        <header class="header">
-            <h1><i class="fas fa-tv"></i> Android TV Box Management</h1>
-            <div class="status-indicator">
-                <span id="connection-status" class="status offline">Offline</span>
-            </div>
-        </header>
+  <header class="topbar">
+    <div class="brand">Android TV Box Console</div>
+    <div class="pill" id="pill-adb">ADB: Unknown</div>
+  </header>
 
-        <nav class="nav-tabs">
-            <button class="tab-button active" data-tab="dashboard">
-                <i class="fas fa-tachometer-alt"></i> Dashboard
-            </button>
-            <button class="tab-button" data-tab="apps">
-                <i class="fas fa-mobile-alt"></i> Apps
-            </button>
-            <button class="tab-button" data-tab="config">
-                <i class="fas fa-cog"></i> Configuration
-            </button>
-            <button class="tab-button" data-tab="mqtt">
-                <i class="fas fa-broadcast-tower"></i> MQTT
-            </button>
-        </nav>
+  <main class="wrap">
+    <!-- Device Status -->
+    <section class="panel">
+      <h2>Device Status</h2>
+      <div class="grid-3">
+        <div class="kv"><div class="k">Power</div><div class="v" id="v-power">Unknown</div></div>
+        <div class="kv"><div class="k">WiFi</div><div class="v" id="v-wifi">Unknown</div></div>
+        <div class="kv"><div class="k">Current App</div><div class="v" id="v-app">Unknown</div></div>
+      </div>
+      <div class="actions right">
+        <button id="btn-refresh">Refresh Status</button>
+      </div>
+    </section>
 
-        <!-- Dashboard Tab -->
-        <div id="dashboard" class="tab-content active">
-            <div class="dashboard-grid">
-                <div class="card">
-                    <h3><i class="fas fa-power-off"></i> Device Status</h3>
-                    <div class="status-item">
-                        <span class="label">Power:</span>
-                        <span id="device-power" class="value">Unknown</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="label">WiFi:</span>
-                        <span id="wifi-status" class="value">Unknown</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="label">Current App:</span>
-                        <span id="current-app" class="value">Unknown</span>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h3><i class="fas fa-shield-alt"></i> iSG Status</h3>
-                    <div class="status-item">
-                        <span class="label">iSG Running:</span>
-                        <span id="isg-status" class="value">Unknown</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="label">Last Check:</span>
-                        <span id="last-check" class="value">Never</span>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h3><i class="fas fa-tools"></i> Quick Actions</h3>
-                    <div class="action-buttons">
-                        <button id="refresh-status" class="btn btn-primary">
-                            <i class="fas fa-sync"></i> Refresh Status
-                        </button>
-                        <button id="wake-isg" class="btn btn-success">
-                            <i class="fas fa-play"></i> Wake iSG
-                        </button>
-                        <button id="restart-isg" class="btn btn-warning">
-                            <i class="fas fa-redo"></i> Restart iSG
-                        </button>
-                    </div>
-                </div>
-            </div>
+    <!-- ADB Connection -->
+    <section class="panel">
+      <h2>ADB Connection</h2>
+      <div class="grid-3">
+        <div class="kv">
+          <label class="k" for="i-host">Device IP</label>
+          <input class="input" id="i-host" placeholder="127.0.0.1" />
         </div>
-
-        <!-- Apps Tab -->
-        <div id="apps" class="tab-content">
-            <div class="section-header">
-                <h2><i class="fas fa-mobile-alt"></i> Application Management</h2>
-                <button id="add-app-btn" class="btn btn-primary">
-                    <i class="fas fa-plus"></i> Add App
-                </button>
-            </div>
-
-            <div class="apps-grid" id="apps-grid">
-                <!-- Apps will be loaded here -->
-            </div>
+        <div class="kv">
+          <label class="k" for="i-port">Port</label>
+          <input class="input" id="i-port" placeholder="5555" />
         </div>
-
-        <!-- Configuration Tab -->
-        <div id="config" class="tab-content">
-            <div class="section-header">
-                <h2><i class="fas fa-cog"></i> Configuration</h2>
-                <button id="save-config" class="btn btn-success">
-                    <i class="fas fa-save"></i> Save Configuration
-                </button>
-            </div>
-
-            <div class="config-sections">
-                <div class="config-section">
-                    <h3><i class="fas fa-network-wired"></i> ADB Connection</h3>
-                    <div class="form-group">
-                        <label for="adb-host">Host:</label>
-                        <input type="text" id="adb-host" placeholder="127.0.0.1">
-                    </div>
-                    <div class="form-group">
-                        <label for="adb-port">Port:</label>
-                        <input type="number" id="adb-port" placeholder="5555">
-                    </div>
-                    <div class="form-group">
-                        <label for="device-name">Device Name:</label>
-                        <input type="text" id="device-name" placeholder="Android TV Box">
-                    </div>
-                    <button id="test-adb" class="btn btn-info">
-                        <i class="fas fa-plug"></i> Test Connection
-                    </button>
-                </div>
-
-                <div class="config-section">
-                    <h3><i class="fas fa-home"></i> Home Assistant</h3>
-                    <div class="form-group">
-                        <label for="ha-host">HA Host:</label>
-                        <input type="text" id="ha-host" placeholder="localhost">
-                    </div>
-                    <div class="form-group">
-                        <label for="ha-port">HA Port:</label>
-                        <input type="number" id="ha-port" placeholder="8123">
-                    </div>
-                    <div class="form-group">
-                        <label for="ha-token">HA Token:</label>
-                        <input type="password" id="ha-token" placeholder="Your HA token">
-                    </div>
-                </div>
-
-                <div class="config-section">
-                    <h3><i class="fas fa-camera"></i> Screenshot Settings</h3>
-                    <div class="form-group">
-                        <label for="screenshot-path">Screenshot Path:</label>
-                        <input type="text" id="screenshot-path" placeholder="/sdcard/isgbackup/screenshot/">
-                    </div>
-                    <div class="form-group">
-                        <label for="screenshot-keep">Keep Count:</label>
-                        <input type="number" id="screenshot-keep" placeholder="3">
-                    </div>
-                    <div class="form-group">
-                        <label for="screenshot-interval">Interval (seconds):</label>
-                        <input type="number" id="screenshot-interval" placeholder="3">
-                    </div>
-                </div>
-
-                <div class="config-section">
-                    <h3><i class="fas fa-shield-alt"></i> iSG Monitoring</h3>
-                    <div class="form-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="isg-monitoring">
-                            <span class="checkmark"></span>
-                            Enable iSG Monitoring
-                        </label>
-                    </div>
-                    <div class="form-group">
-                        <label for="isg-interval">Check Interval (seconds):</label>
-                        <input type="number" id="isg-interval" placeholder="30">
-                    </div>
-                </div>
-            </div>
+        <div class="kv">
+          <label class="k" for="i-name">Device Name</label>
+          <input class="input" id="i-name" placeholder="Android TV Box" />
         </div>
+      </div>
+      <div class="actions right">
+        <button class="secondary" id="btn-save">Save Config</button>
+        <button id="btn-connect">Connect ADB</button>
+      </div>
+    </section>
 
-        <!-- MQTT Tab -->
-        <div id="mqtt" class="tab-content">
-            <div class="section-header">
-                <h2><i class="fas fa-broadcast-tower"></i> MQTT Configuration</h2>
-                <button id="test-mqtt" class="btn btn-info">
-                    <i class="fas fa-plug"></i> Test MQTT
-                </button>
-            </div>
-
-            <div class="config-sections">
-                <div class="config-section">
-                    <h3><i class="fas fa-server"></i> MQTT Broker</h3>
-                    <div class="form-group">
-                        <label for="mqtt-broker">Broker Host:</label>
-                        <input type="text" id="mqtt-broker" placeholder="localhost">
-                    </div>
-                    <div class="form-group">
-                        <label for="mqtt-port">Broker Port:</label>
-                        <input type="number" id="mqtt-port" placeholder="1883">
-                    </div>
-                    <div class="form-group">
-                        <label for="mqtt-username">Username:</label>
-                        <input type="text" id="mqtt-username" placeholder="mqtt_username">
-                    </div>
-                    <div class="form-group">
-                        <label for="mqtt-password">Password:</label>
-                        <input type="password" id="mqtt-password" placeholder="mqtt_password">
-                    </div>
-                    <div class="form-group">
-                        <label for="mqtt-client-id">Client ID:</label>
-                        <input type="text" id="mqtt-client-id" placeholder="android_tv_box">
-                    </div>
-                </div>
-
-                <div class="config-section">
-                    <h3><i class="fas fa-topic"></i> Topics</h3>
-                    <div class="form-group">
-                        <label for="mqtt-base-topic">Base Topic:</label>
-                        <input type="text" id="mqtt-base-topic" placeholder="android_tv_box">
-                    </div>
-                    <div class="form-group">
-                        <label for="mqtt-status-topic">Status Topic:</label>
-                        <input type="text" id="mqtt-status-topic" placeholder="status">
-                    </div>
-                    <div class="form-group">
-                        <label for="mqtt-command-topic">Command Topic:</label>
-                        <input type="text" id="mqtt-command-topic" placeholder="command">
-                    </div>
-                </div>
-
-                <div class="config-section">
-                    <h3><i class="fas fa-cog"></i> Advanced Settings</h3>
-                    <div class="form-group">
-                        <label for="mqtt-qos">QoS Level:</label>
-                        <select id="mqtt-qos">
-                            <option value="0">0 - At most once</option>
-                            <option value="1" selected>1 - At least once</option>
-                            <option value="2">2 - Exactly once</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="mqtt-retain">Retain Messages:</label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="mqtt-retain">
-                            <span class="checkmark"></span>
-                            Retain messages
-                        </label>
-                    </div>
-                    <div class="form-group">
-                        <label for="mqtt-keepalive">Keep Alive (seconds):</label>
-                        <input type="number" id="mqtt-keepalive" placeholder="60">
-                    </div>
-                </div>
-            </div>
+    <!-- Apps & Quick Launch -->
+    <section class="panel">
+      <h2>Application Management</h2>
+      <div class="grid-3">
+        <div class="kv">
+          <label class="k" for="i-app-name">App Name</label>
+          <input class="input" id="i-app-name" placeholder="YouTube" />
         </div>
-    </div>
-
-    <!-- Add App Modal -->
-    <div id="add-app-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-plus"></i> Add Application</h3>
-                <span class="close">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="app-name">App Name:</label>
-                    <input type="text" id="app-name" placeholder="e.g., Netflix">
-                </div>
-                <div class="form-group">
-                    <label for="app-package">Package Name:</label>
-                    <input type="text" id="app-package" placeholder="e.g., com.netflix.mediaclient">
-                </div>
-                <div class="form-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="app-visible" checked>
-                        <span class="checkmark"></span>
-                        Show in Home Assistant
-                    </label>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button id="cancel-add-app" class="btn btn-secondary">Cancel</button>
-                <button id="confirm-add-app" class="btn btn-primary">Add App</button>
-            </div>
+        <div class="kv">
+          <label class="k" for="i-app-pkg">Package</label>
+          <input class="input" id="i-app-pkg" placeholder="com.google.android.youtube" />
         </div>
-    </div>
-
-    <!-- Edit App Modal -->
-    <div id="edit-app-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-edit"></i> Edit Application</h3>
-                <span class="close">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="edit-app-name">App Name:</label>
-                    <input type="text" id="edit-app-name">
-                </div>
-                <div class="form-group">
-                    <label for="edit-app-package">Package Name:</label>
-                    <input type="text" id="edit-app-package">
-                </div>
-                <div class="form-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="edit-app-visible">
-                        <span class="checkmark"></span>
-                        Show in Home Assistant
-                    </label>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button id="cancel-edit-app" class="btn btn-secondary">Cancel</button>
-                <button id="confirm-edit-app" class="btn btn-primary">Update App</button>
-            </div>
+        <div class="kv">
+          <label class="k">Show in dropdown</label>
+          <label class="chk"><input type="checkbox" id="i-app-vis" checked /> Visible</label>
         </div>
-    </div>
+      </div>
+      <div class="actions right">
+        <button class="secondary" id="btn-load-apps">Refresh List</button>
+        <button id="btn-add-app">Add App</button>
+      </div>
 
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay">
-        <div class="spinner"></div>
-        <p>Loading...</p>
-    </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Name</th><th>Package</th><th>Visible</th><th>Actions</th></tr></thead>
+          <tbody id="tb-apps"></tbody>
+        </table>
+      </div>
 
-    <!-- Toast Notifications -->
-    <div id="toast-container" class="toast-container"></div>
+      <div class="hr"></div>
+      <div class="grid-2">
+        <div class="kv">
+          <label class="k" for="sel-launch">Quick Launch</label>
+          <select class="input" id="sel-launch" aria-label="Visible Apps"></select>
+        </div>
+        <div class="actions left">
+          <button id="btn-launch">Launch</button>
+        </div>
+      </div>
+    </section>
 
-    <script src="/static/script.js?v=1758248792"></script>
+    <!-- iSG Watchdog -->
+    <section class="panel">
+      <h2>iSG Watchdog</h2>
+      <div class="grid-3">
+        <div class="kv">
+          <label class="k" for="i-isg-enable">Enable Watchdog</label>
+          <label class="chk"><input type="checkbox" id="i-isg-enable" /> Enabled</label>
+        </div>
+        <div class="kv">
+          <label class="k" for="i-isg-interval">Check Interval (seconds)</label>
+          <input class="input" id="i-isg-interval" type="number" placeholder="30" />
+        </div>
+        <div class="kv">
+          <label class="k">Actions</label>
+          <div class="actions">
+            <button class="secondary" id="btn-isg-wake">Wake iSG</button>
+            <button id="btn-isg-restart">Restart iSG</button>
+          </div>
+        </div>
+      </div>
+      <div class="actions right">
+        <button class="secondary" id="btn-save-isg">Save Watchdog</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status"></div>
+  <script src="/static/script.js?v=1.3.0"></script>
 </body>
 </html>

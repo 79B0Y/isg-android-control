@@ -1,0 +1,45 @@
+# Android TV Box Integration Configuration
+# Add this to your Home Assistant configuration.yaml
+
+android_tv_box:
+  host: "192.168.188.221"  # Change to your Android device IP
+  port: 5555
+  device_name: "Android TV Box"
+  
+  # Screenshot settings
+  screenshot_path: "/sdcard/isgbackup/screenshot/"
+  screenshot_keep_count: 3
+  screenshot_interval: 3  # seconds
+  
+  # Performance monitoring
+  performance_check_interval: 500  # milliseconds
+  cpu_threshold: 50  # percentage
+  
+  # Termux/Ubuntu environment settings
+  termux_mode: true
+  ubuntu_venv_path: "~/uiauto_env"
+  adb_path: "/usr/bin/adb"
+  
+  # iSG application monitoring
+  isg_monitoring: true
+  isg_check_interval: 30  # seconds
+  
+  # Application management
+  apps:
+    YouTube: com.google.android.youtube
+    Netflix: com.netflix.mediaclient
+    iSG: com.linknlink.app.device.isg
+    Settings: com.android.settings
+    File Manager: com.android.documentsui
+  
+  # Visible apps in selector (if not specified, all apps will be shown)
+  visible:
+    - YouTube
+    - Netflix
+    - iSG
+    - Settings
+
+# Optional: Enable logging for debugging
+logger:
+  logs:
+    custom_components.android_tv_box: debug

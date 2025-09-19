@@ -12,7 +12,7 @@
 2. **添加自定义仓库**
    - 打开HACS → Integrations
    - 点击右上角菜单 → Custom repositories
-   - 添加仓库: `https://github.com/your-username/android-tv-box`
+   - 添加仓库: `https://github.com/bobo/android-tv-box`
    - 类别选择: Integration
 
 3. **安装集成**
@@ -44,7 +44,7 @@
 1. **打开Termux应用**
 2. **运行设置脚本**:
    ```bash
-   curl -sSL https://raw.githubusercontent.com/your-repo/android-tv-box/main/setup_android.sh | bash
+   curl -sSL https://raw.githubusercontent.com/bobo/android-tv-box/main/setup_android.sh | bash
    ```
    或者手动运行：
    ```bash
@@ -74,7 +74,7 @@
 
 3. **运行Ubuntu设置脚本**:
    ```bash
-   curl -sSL https://raw.githubusercontent.com/your-repo/android-tv-box/main/setup_ubuntu.sh | bash
+   curl -sSL https://raw.githubusercontent.com/bobo/android-tv-box/main/setup_ubuntu.sh | bash
    ```
 
 ### 步骤3: 部署集成 (1分钟)
@@ -83,7 +83,7 @@
    ```bash
    # 在Ubuntu容器中
    cd ~
-   git clone https://github.com/your-repo/android-tv-box.git
+   git clone https://github.com/bobo/android-tv-box.git
    cd android-tv-box
    bash deploy.sh
    ```
@@ -239,7 +239,7 @@ data:
 
 - 📖 详细文档: [README.md](README.md)
 - 🌐 Web界面指南: [WEB_INTERFACE_GUIDE.md](WEB_INTERFACE_GUIDE.md)
-- 🐛 问题报告: [GitHub Issues](https://github.com/your-repo/android-tv-box/issues)
+- 🐛 问题报告: [GitHub Issues](https://github.com/bobo/android-tv-box/issues)
 - 💬 社区讨论: [Home Assistant Community](https://community.home-assistant.io/)
 
 ---

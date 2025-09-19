@@ -132,6 +132,7 @@ dmypy.json
 var/
 *.pid
 *.log
+\=*  # stray files created by mis-redirected shell (e.g., '=3.8.0')
 configs/local_*.yaml
 configs/secrets.yaml
 

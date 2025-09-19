@@ -18,6 +18,12 @@ def get_config(hass: HomeAssistant) -> Optional[Dict[str, Any]]:
     """Get the configuration."""
     if DOMAIN not in hass.data:
         return None
+    
+    # First try yaml_config (from configuration.yaml), then fall back to config entry data
+    yaml_config = hass.data[DOMAIN].get("yaml_config")
+    if yaml_config:
+        return yaml_config
+    
     return hass.data[DOMAIN].get("config")
 
 

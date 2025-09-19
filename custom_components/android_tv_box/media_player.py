@@ -38,24 +38,62 @@ class AndroidTVBoxCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self) -> Dict[str, Any]:
         """Update data via library."""
+        # Default data structure
+        data = {
+            "volume_level": 0.5,
+            "is_on": False,
+            "current_app": "Unknown",
+            "is_volume_muted": False,
+            "media_state": "unknown"
+        }
+        
         try:
-            data = {}
-            
-            # Get volume level
-            volume = await self.adb_service.get_volume()
-            data["volume_level"] = volume / 100 if volume is not None else None
+            # Get volume level and mute status
+            try:
+                volume = await self.adb_service.get_volume()
+                if volume is not None:
+                    data["volume_level"] = volume / 100
+                    data["is_volume_muted"] = volume == 0
+                else:
+                    data["volume_level"] = 0.5
+                    data["is_volume_muted"] = False
+            except Exception as e:
+                _LOGGER.warning(f"Failed to get volume: {e}")
             
             # Check if device is powered on
-            is_on = await self.adb_service.is_powered_on()
-            data["is_on"] = is_on
+            try:
+                is_on = await self.adb_service.is_powered_on()
+                data["is_on"] = is_on
+            except Exception as e:
+                _LOGGER.warning(f"Failed to get power status: {e}")
             
             # Get current app
-            current_app = await self.adb_service.get_current_app()
-            data["current_app"] = current_app
+            try:
+                current_app = await self.adb_service.get_current_app()
+                data["current_app"] = current_app if current_app else "Unknown"
+            except Exception as e:
+                _LOGGER.warning(f"Failed to get current app: {e}")
+            
+            # Determine media state using media_session when possible
+            try:
+                playback = await self.adb_service.get_playback_state()
+            except Exception:
+                playback = None
+
+            if not data["is_on"]:
+                data["media_state"] = "off"
+            elif playback in ("playing", "paused", "stopped", "idle"):
+                data["media_state"] = playback
+            elif data["current_app"] and data["current_app"] != "Unknown":
+                # Fallback heuristic
+                data["media_state"] = "playing"
+            else:
+                data["media_state"] = "idle"
             
             return data
         except Exception as err:
-            raise UpdateFailed(f"Error communicating with Android TV Box: {err}")
+            _LOGGER.error(f"Error communicating with Android TV Box: {err}")
+            return data  # Return default data instead of raising exception
 
 
 async def async_setup_entry(
@@ -93,7 +131,7 @@ class AndroidTVBoxMediaPlayer(MediaPlayerEntity):
         self._attr_device_info = {
             "identifiers": {("android_tv_box", self._attr_unique_id)},
             "name": config.get("name", "Android TV Box"),
-            "manufacturer": "Android",
+            "manufacturer": "LinknLink",
             "model": "TV Box",
         }
 
@@ -102,6 +140,7 @@ class AndroidTVBoxMediaPlayer(MediaPlayerEntity):
         """Flag media player features that are supported."""
         return (
             MediaPlayerEntityFeature.PLAY_MEDIA
+            | MediaPlayerEntityFeature.PLAY
             | MediaPlayerEntityFeature.PAUSE
             | MediaPlayerEntityFeature.STOP
             | MediaPlayerEntityFeature.PREVIOUS_TRACK
@@ -119,9 +158,18 @@ class AndroidTVBoxMediaPlayer(MediaPlayerEntity):
         if not self.coordinator.data.get("is_on", False):
             return MediaPlayerState.OFF
         
-        # For now, we'll assume playing if device is on
-        # In a real implementation, you might want to detect actual media state
-        return MediaPlayerState.PLAYING
+        # Use the media state from coordinator data
+        media_state = self.coordinator.data.get("media_state", "unknown")
+        if media_state == "off":
+            return MediaPlayerState.OFF
+        elif media_state == "playing":
+            return MediaPlayerState.PLAYING
+        elif media_state == "paused":
+            return MediaPlayerState.PAUSED
+        elif media_state in ("idle", "stopped"):
+            return MediaPlayerState.IDLE
+        else:
+            return MediaPlayerState.STANDBY
 
     @property
     def volume_level(self) -> Optional[float]:
@@ -131,8 +179,7 @@ class AndroidTVBoxMediaPlayer(MediaPlayerEntity):
     @property
     def is_volume_muted(self) -> bool:
         """Boolean if volume is currently muted."""
-        volume = self.coordinator.data.get("volume_level")
-        return volume == 0 if volume is not None else False
+        return self.coordinator.data.get("is_volume_muted", False)
 
     @property
     def media_title(self) -> Optional[str]:
@@ -194,10 +241,16 @@ class AndroidTVBoxMediaPlayer(MediaPlayerEntity):
     async def async_mute_volume(self, mute: bool) -> None:
         """Mute the volume."""
         if mute:
-            await self.coordinator.adb_service.set_volume(0)
+            # Store current volume level before muting
+            current_volume = self.coordinator.data.get("volume_level", 0.5)
+            if current_volume > 0:
+                # Store volume level for unmuting
+                self._previous_volume = current_volume
+            await self.coordinator.adb_service.volume_mute()
         else:
-            # Unmute by setting volume to a reasonable level
-            await self.coordinator.adb_service.set_volume(50)
+            # Use stored volume level or default to 50%
+            restore_volume = getattr(self, '_previous_volume', 0.5) * 100
+            await self.coordinator.adb_service.set_volume(int(restore_volume))
         await self.coordinator.async_request_refresh()
 
     async def async_volume_up(self) -> None:

@@ -45,7 +45,7 @@ class AndroidTVBoxRemote(RemoteEntity):
         self._attr_device_info = {
             "identifiers": {("android_tv_box", f"android_tv_box_{config.get('host', '127.0.0.1')}_{config.get('port', 5555)}")},
             "name": config.get("name", "Android TV Box"),
-            "manufacturer": "Android",
+            "manufacturer": "LinknLink",
             "model": "TV Box",
         }
 

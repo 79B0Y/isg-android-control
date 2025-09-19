@@ -1,7 +1,7 @@
 # Android TV Box Integration
 
 [![hacs][hacsbadge]][hacs]
-![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1.0+-green.svg)
 ![Maintenance](https://img.shields.io/badge/Maintainer-@bobo-orange.svg)
 
@@ -161,7 +161,7 @@ android_tv_box:
 2. **Add Custom Repository**
    - Open HACS → Integrations
    - Click the three dots menu → Custom repositories
-   - Add repository: `https://github.com/your-username/android-tv-box`
+   - Add repository: `https://github.com/bobo/android-tv-box`
    - Category: Integration
 
 3. **Install Integration**
@@ -179,7 +179,7 @@ android_tv_box:
 1. **Download the integration**
    ```bash
    cd /config/custom_components
-   git clone https://github.com/your-username/android-tv-box.git android_tv_box
+   git clone https://github.com/bobo/android-tv-box.git android_tv_box
    ```
 
 2. **Restart Home Assistant**
@@ -347,8 +347,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Getting Help
 
-- **GitHub Issues**: [Report bugs and request features](https://github.com/your-username/android-tv-box/issues)
-- **GitHub Discussions**: [Community discussions](https://github.com/your-username/android-tv-box/discussions)
+- **GitHub Issues**: [Report bugs and request features](https://github.com/bobo/android-tv-box/issues)
+- **GitHub Discussions**: [Community discussions](https://github.com/bobo/android-tv-box/discussions)
 - **Home Assistant Community**: [HA Community Forum](https://community.home-assistant.io/)
 
 ### FAQ

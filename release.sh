@@ -131,7 +131,7 @@ RELEASE_NOTES="## Release v$VERSION
 - Web management interface (port 3003)
 
 ### Installation
-- Install via HACS: Add custom repository \`https://github.com/your-username/android-tv-box\`
+- Install via HACS: Add custom repository \`https://github.com/bobo/android-tv-box\`
 - Or download manually and place in \`custom_components/\` directory
 
 ### Configuration
@@ -147,8 +147,8 @@ RELEASE_NOTES="## Release v$VERSION
 - ADB enabled on Android device
 
 ### Support
-- GitHub Issues: https://github.com/your-username/android-tv-box/issues
-- Documentation: https://github.com/your-username/android-tv-box/blob/main/README.md"
+- GitHub Issues: https://github.com/bobo/android-tv-box/issues
+- Documentation: https://github.com/bobo/android-tv-box/blob/main/README.md"
 
 echo "$RELEASE_NOTES" > RELEASE_NOTES.md
 print_status "Release notes created: RELEASE_NOTES.md"

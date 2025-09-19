@@ -2,7 +2,7 @@
 
 ![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1.0+-green.svg)
-![Maintenance](https://img.shields.io/badge/Maintainer-@your-username-orange.svg)
+![Maintenance](https://img.shields.io/badge/Maintainer-@bobo-orange.svg)
 
 ## 📱 Control Your Android TV Box with Home Assistant
 
@@ -39,7 +39,7 @@ Access a beautiful web interface at `http://localhost:3003` for:
 - Home Assistant running in Ubuntu container
 
 ### Installation via HACS
-1. Add custom repository: `https://github.com/your-username/android-tv-box`
+1. Add custom repository: `https://github.com/bobo/android-tv-box`
 2. Search for "Android TV Box" in HACS
 3. Click Download and restart Home Assistant
 4. Add integration through Settings → Devices & Services
@@ -166,8 +166,8 @@ logger:
 
 ## 🤝 Community & Support
 
-- **GitHub Issues**: [Report bugs and request features](https://github.com/your-username/android-tv-box/issues)
-- **GitHub Discussions**: [Community discussions](https://github.com/your-username/android-tv-box/discussions)
+- **GitHub Issues**: [Report bugs and request features](https://github.com/bobo/android-tv-box/issues)
+- **GitHub Discussions**: [Community discussions](https://github.com/bobo/android-tv-box/discussions)
 - **Home Assistant Community**: [HA Community Forum](https://community.home-assistant.io/)
 
 ## 🎉 Why Choose This Integration?

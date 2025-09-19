@@ -24,7 +24,7 @@
 2. **添加自定义仓库**
    - 点击右上角的三个点菜单
    - 选择 "Custom repositories"
-   - 在 "Repository" 字段输入: `https://github.com/your-username/android-tv-box`
+   - 在 "Repository" 字段输入: `https://github.com/bobo/android-tv-box`
    - 在 "Category" 下拉菜单中选择: `Integration`
    - 点击 "Add"
 
@@ -45,7 +45,7 @@
 ```bash
 # 在 Home Assistant 容器中
 cd /config/custom_components
-git clone https://github.com/your-username/android-tv-box.git android_tv_box
+git clone https://github.com/bobo/android-tv-box.git android_tv_box
 ```
 
 ### 配置集成
@@ -129,7 +129,7 @@ git clone https://github.com/your-username/android-tv-box.git android_tv_box
 
 #### 获取帮助
 
-- **GitHub Issues**: [https://github.com/your-username/android-tv-box/issues](https://github.com/your-username/android-tv-box/issues)
+- **GitHub Issues**: [https://github.com/bobo/android-tv-box/issues](https://github.com/bobo/android-tv-box/issues)
 - **HACS 文档**: [https://hacs.xyz/docs/](https://hacs.xyz/docs/)
 - **Home Assistant 社区**: [https://community.home-assistant.io/](https://community.home-assistant.io/)
 

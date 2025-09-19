@@ -15,7 +15,7 @@ Thank you for your interest in contributing to the Android TV Box Home Assistant
 
 1. **Fork the repository**
    ```bash
-   git clone https://github.com/your-username/android-tv-box.git
+   git clone https://github.com/bobo/android-tv-box.git
    cd android-tv-box
    ```
 

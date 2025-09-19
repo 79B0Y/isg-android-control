@@ -78,6 +78,8 @@ class AndroidTVBoxWebServer:
         """Setup web routes."""
         # Root route to serve index.html
         self.app.router.add_get('/', self._serve_index)
+        # Health route for availability checks
+        self.app.router.add_get('/health', self._health)
         
         # Static files
         self.app.router.add_static('/static', path=os.path.join(os.path.dirname(__file__), 'web'), name='static')
@@ -95,17 +97,42 @@ class AndroidTVBoxWebServer:
         self.app.router.add_post('/api/restart-ha', self._restart_ha)
         self.app.router.add_post('/api/wake-isg', self._wake_isg)
         self.app.router.add_post('/api/restart-isg', self._restart_isg)
+        self.app.router.add_post('/api/launch-app', self._launch_app)
+        self.app.router.add_post('/api/connect-adb', self._connect_adb)
 
     async def _serve_index(self, request: Request) -> Response:
         """Serve the main index.html file."""
         try:
             index_path = os.path.join(os.path.dirname(__file__), 'web', 'index.html')
-            with open(index_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+            loop = asyncio.get_event_loop()
+            content = await loop.run_in_executor(None, self._read_file_sync, index_path)
             return web.Response(text=content, content_type='text/html')
         except Exception as e:
             _LOGGER.error(f"Error serving index: {e}")
             return web.Response(text="Error loading page", status=500)
+
+    async def _health(self, request: Request) -> Response:
+        """Simple health check endpoint."""
+        try:
+            adb_service = get_adb_service(self.hass)
+            adb_ok = False
+            try:
+                adb_ok = await adb_service.is_connected() if adb_service else False
+            except Exception:
+                adb_ok = False
+            return web.json_response({
+                "ok": True,
+                "adb_connected": adb_ok,
+                "time": datetime.utcnow().isoformat() + "Z",
+            })
+        except Exception as e:
+            _LOGGER.debug(f"Health endpoint error: {e}")
+            return web.json_response({"ok": False}, status=500)
+    
+    def _read_file_sync(self, file_path: str) -> str:
+        """Read file synchronously for use in executor."""
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return f.read()
 
     async def _get_config(self, request: Request) -> Response:
         """Get current configuration."""
@@ -153,12 +180,33 @@ class AndroidTVBoxWebServer:
                         "error": f"Missing required field: {field}"
                     }, status=400)
             
-            # Update configuration
+            # Update configuration in memory
             config = get_config(self.hass)
+            # Convert to mutable dict
+            if hasattr(config, '_data'):
+                config = dict(config._data)
+            elif not isinstance(config, dict):
+                config = dict(config)
+
             config.update(data)
-            
-            # Save to configuration file
+
+            # Persist to configuration file
             await self._save_config_to_file(config)
+
+            # Try to apply live changes (e.g., host/port) to current ADB service
+            try:
+                adb_service = get_adb_service(self.hass)
+                if adb_service and ("host" in data or "port" in data):
+                    if "host" in data:
+                        adb_service.host = data["host"]
+                    if "port" in data:
+                        adb_service.port = int(data["port"])
+                    adb_service.device_address = f"{adb_service.host}:{adb_service.port}"
+                    # Attempt reconnect non-blocking
+                    await adb_service.disconnect()
+                    await adb_service.connect()
+            except Exception as e:
+                _LOGGER.warning(f"Applied config saved but live ADB reconfigure failed: {e}")
             
             return web.json_response({
                 "success": True,
@@ -229,6 +277,12 @@ class AndroidTVBoxWebServer:
                 }, status=400)
             
             config = get_config(self.hass)
+            # Convert to mutable dict
+            if hasattr(config, '_data'):
+                config = dict(config._data)
+            elif not isinstance(config, dict):
+                config = dict(config)
+            
             apps = config.get('apps', {})
             visible = config.get('visible', [])
             
@@ -263,7 +317,15 @@ class AndroidTVBoxWebServer:
             app_id = request.match_info['app_id']
             data = await request.json()
             
+            _LOGGER.info(f"Updating app with ID: '{app_id}'")
+            
             config = get_config(self.hass)
+            # Convert to mutable dict
+            if hasattr(config, '_data'):
+                config = dict(config._data)
+            elif not isinstance(config, dict):
+                config = dict(config)
+            
             apps = config.get('apps', {})
             visible = config.get('visible', [])
             
@@ -323,6 +385,12 @@ class AndroidTVBoxWebServer:
             app_id = request.match_info['app_id']
             
             config = get_config(self.hass)
+            # Convert to mutable dict
+            if hasattr(config, '_data'):
+                config = dict(config._data)
+            elif not isinstance(config, dict):
+                config = dict(config)
+            
             apps = config.get('apps', {})
             visible = config.get('visible', [])
             
@@ -366,7 +434,13 @@ class AndroidTVBoxWebServer:
                 "device_powered_on": False,
                 "wifi_enabled": False,
                 "current_app": None,
+                "current_app_name": None,
                 "isg_running": False,
+                "cpu_usage": 0,
+                "memory_used": 0,
+                "brightness": 0,
+                "ssid": "Unknown",
+                "ip_address": "Unknown",
                 "timestamp": datetime.now().isoformat()
             }
             
@@ -378,6 +452,43 @@ class AndroidTVBoxWebServer:
                         status["wifi_enabled"] = await adb_service.is_wifi_on()
                         status["current_app"] = await adb_service.get_current_app()
                         status["isg_running"] = await adb_service.is_isg_running()
+                        
+                        # Get additional data
+                        try:
+                            brightness = await adb_service.get_brightness()
+                            status["brightness"] = brightness
+                        except Exception as e:
+                            _LOGGER.warning(f"Failed to get brightness: {e}")
+                        
+                        try:
+                            wifi_info = await adb_service.get_wifi_info()
+                            status.update(wifi_info)
+                        except Exception as e:
+                            _LOGGER.warning(f"Failed to get WiFi info: {e}")
+                        
+                        try:
+                            performance = await adb_service.get_system_performance()
+                            status.update(performance)
+                        except Exception as e:
+                            _LOGGER.warning(f"Failed to get system performance: {e}")
+                        
+                        # Find current app name from package name
+                        if status["current_app"] and config:
+                            # Convert to mutable dict if needed
+                            if hasattr(config, '_data'):
+                                config = dict(config._data)
+                            elif not isinstance(config, dict):
+                                config = dict(config)
+                            
+                            apps = config.get("apps", {})
+                            _LOGGER.info(f"Looking for app name for package: {status['current_app']}")
+                            _LOGGER.info(f"Available apps: {apps}")
+                            
+                            for app_name, package_name in apps.items():
+                                if package_name == status["current_app"]:
+                                    status["current_app_name"] = app_name
+                                    _LOGGER.info(f"Found app name: {app_name}")
+                                    break
                 except Exception as e:
                     _LOGGER.warning(f"Error getting status: {e}")
             
@@ -574,3 +685,101 @@ class AndroidTVBoxWebServer:
         except Exception as e:
             _LOGGER.error(f"Error saving config: {e}")
             raise
+
+    async def _launch_app(self, request: Request) -> Response:
+        """Launch an application."""
+        try:
+            data = await request.json()
+            package_name = data.get('package_name')
+            
+            if not package_name:
+                return web.json_response({
+                    "success": False,
+                    "error": "Package name is required"
+                }, status=400)
+            
+            adb_service = get_adb_service(self.hass)
+            if not adb_service:
+                return web.json_response({
+                    "success": False,
+                    "error": "ADB service not available"
+                }, status=500)
+            
+            # Launch the app
+            success = await adb_service.launch_app(package_name)
+            
+            if success:
+                return web.json_response({
+                    "success": True,
+                    "message": f"App '{package_name}' launched successfully"
+                })
+            else:
+                return web.json_response({
+                    "success": False,
+                    "error": f"Failed to launch app '{package_name}'"
+                }, status=500)
+                
+        except Exception as e:
+            _LOGGER.error(f"Error launching app: {e}")
+            return web.json_response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
+
+    async def _connect_adb(self, request: Request) -> Response:
+        """Connect to ADB device."""
+        try:
+            data = await request.json()
+            host = data.get('host', '127.0.0.1')
+            port = int(data.get('port', 5555))
+            
+            _LOGGER.info(f"Connecting to ADB device at {host}:{port}")
+            
+            adb_service = get_adb_service(self.hass)
+            if not adb_service:
+                return web.json_response({
+                    "success": False,
+                    "error": "ADB service not available"
+                }, status=500)
+
+            # Reconfigure live ADB service to target requested host/port
+            try:
+                await adb_service.disconnect()
+            except Exception:
+                pass
+            adb_service.host = host
+            adb_service.port = port
+            adb_service.device_address = f"{host}:{port}"
+
+            # Persist minimal host/port to config file as a convenience
+            try:
+                cfg = get_config(self.hass) or {}
+                if hasattr(cfg, '_data'):
+                    cfg = dict(cfg._data)
+                cfg = dict(cfg)
+                cfg['host'] = host
+                cfg['port'] = port
+                await self._save_config_to_file(cfg)
+            except Exception as e:
+                _LOGGER.debug(f"Failed to persist host/port change: {e}")
+
+            # Try to connect now
+            success = await adb_service.connect()
+            
+            if success:
+                return web.json_response({
+                    "success": True,
+                    "message": f"Successfully connected to {host}:{port}"
+                })
+            else:
+                return web.json_response({
+                    "success": False,
+                    "error": f"Failed to connect to {host}:{port}"
+                }, status=500)
+                
+        except Exception as e:
+            _LOGGER.error(f"Error connecting to ADB: {e}")
+            return web.json_response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
