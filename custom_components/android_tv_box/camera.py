@@ -141,9 +141,12 @@ class AndroidTVBoxCameraCoordinator(DataUpdateCoordinator):
             temp_file = f"{temp_dir}/screenshot_{datetime.now().timestamp()}.png"
             
             # Use adb pull to get the file
-            cmd = ["pull", latest_file, temp_file]
-            result = await self.adb_service._run_command(cmd)
-            
+            try:
+                await self.adb_service.pull_file(latest_file, temp_file)
+            except Exception as err:
+                _LOGGER.error(f"Failed to pull screenshot {latest_file}: {err}")
+                return None
+
             if os.path.exists(temp_file):
                 try:
                     with open(temp_file, 'rb') as f:
@@ -160,7 +163,7 @@ class AndroidTVBoxCameraCoordinator(DataUpdateCoordinator):
                     if os.path.exists(temp_file):
                         os.remove(temp_file)
             else:
-                _LOGGER.error(f"Failed to pull screenshot: {latest_file}")
+                _LOGGER.error(f"Screenshot file missing after pull: {latest_file}")
                 return None
                 
         except Exception as e:

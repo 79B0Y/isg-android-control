@@ -109,6 +109,20 @@ class ADBService:
             process.kill()
             raise subprocess.TimeoutExpired(full_cmd, timeout)
 
+    async def pull_file(self, remote_path: str, local_path: str) -> bool:
+        """Pull a file from the device to the local filesystem."""
+        if not self._connected:
+            if not await self.connect():
+                raise ADBConnectionError("Device not connected")
+
+        try:
+            cmd = ["-s", self.device_address, "pull", remote_path, local_path]
+            await self._run_command(cmd)
+            return True
+        except Exception as err:
+            _LOGGER.error(f"ADB pull failed: {err}")
+            raise ADBConnectionError(f"Command failed: {remote_path}") from err
+
     # Media Player Commands
     async def media_play(self) -> bool:
         """Start media playback."""
