@@ -107,7 +107,7 @@ async def test_enhanced_features():
             test_config = {
                 'host': '192.168.188.221',
                 'port': 5555,
-                'device_name': 'Test Device',
+                'name': 'Test Device',
                 'screenshot_path': '/tmp/screenshots/',
                 'screenshot_keep_count': 3,
                 'screenshot_interval': 3,

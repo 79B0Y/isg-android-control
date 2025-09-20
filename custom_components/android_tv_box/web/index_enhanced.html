@@ -1020,7 +1020,7 @@
             // ADB settings
             document.getElementById('adb-host').value = config.host || '';
             document.getElementById('adb-port').value = config.port || '';
-            document.getElementById('device-name').value = config.device_name || '';
+            document.getElementById('device-name').value = config.name || config.device_name || '';
             
             // Screenshot settings
             document.getElementById('screenshot-path').value = config.screenshot_path || '';
@@ -1039,7 +1039,7 @@
             const newConfig = {
                 host: document.getElementById('adb-host').value,
                 port: parseInt(document.getElementById('adb-port').value),
-                device_name: document.getElementById('device-name').value,
+                name: document.getElementById('device-name').value,
                 screenshot_path: document.getElementById('screenshot-path').value,
                 screenshot_keep_count: parseInt(document.getElementById('screenshot-keep-count').value),
                 screenshot_interval: parseInt(document.getElementById('screenshot-interval').value),

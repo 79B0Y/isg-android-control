@@ -118,7 +118,7 @@ default_config:
 android_tv_box:
   host: "127.0.0.1"
   port: 5555
-  device_name: "Android TV Box"
+  name: "Android TV Box"
   screenshot_path: "/sdcard/isgbackup/screenshot/"
   screenshot_keep_count: 3
   screenshot_interval: 3

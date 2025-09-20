@@ -4,7 +4,7 @@
 android_tv_box:
   host: "192.168.188.221"  # Change to your Android device IP
   port: 5555
-  device_name: "Android TV Box"
+  name: "Android TV Box"
   
   # Screenshot settings
   screenshot_path: "/sdcard/isgbackup/screenshot/"

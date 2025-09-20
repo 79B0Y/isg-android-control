@@ -114,7 +114,8 @@ async def test_all_functions():
                         print("   ✅ 配置管理正常")
                         print(f"      - ADB主机: {config.get('host', 'Unknown')}")
                         print(f"      - ADB端口: {config.get('port', 'Unknown')}")
-                        print(f"      - 设备名称: {config.get('device_name', 'Unknown')}")
+                        device_name = config.get('name') or config.get('device_name', 'Unknown')
+                        print(f"      - 设备名称: {device_name}")
                     else:
                         print("   ❌ 配置管理失败")
                 else:
