@@ -157,7 +157,7 @@ git clone https://github.com/bobo/android-tv-box.git android_tv_box
 android_tv_box:
   host: "127.0.0.1"
   port: 5555
-  device_name: "My Android TV Box"
+  name: "My Android TV Box"
   screenshot_path: "/sdcard/screenshots/"
   screenshot_keep_count: 5
   screenshot_interval: 5

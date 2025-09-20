@@ -130,7 +130,7 @@ android-control/
 android_tv_box:
   host: "127.0.0.1"                    # ADB主机地址
   port: 5555                           # ADB端口
-  device_name: "Android TV Box"        # 设备名称
+  name: "Android TV Box"               # 设备名称
   screenshot_path: "/sdcard/isgbackup/screenshot/"  # 截图路径
   screenshot_keep_count: 3              # 保留截图数量
   screenshot_interval: 3                # 截图间隔（秒）
@@ -140,6 +140,8 @@ android_tv_box:
   ubuntu_venv_path: "~/uiauto_env"      # Python虚拟环境路径
   adb_path: "/usr/bin/adb"             # ADB二进制路径
 ```
+
+> 提示：早期版本中使用的 `device_name` 字段依旧可用，但建议切换为标准的 `name`。
 
 ### 实体配置
 ```yaml

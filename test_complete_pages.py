@@ -79,7 +79,8 @@ async def test_complete_pages():
                                 config = data['data']
                                 print(f"      - ADB主机: {config.get('host', 'Unknown')}")
                                 print(f"      - ADB端口: {config.get('port', 'Unknown')}")
-                                print(f"      - 设备名称: {config.get('device_name', 'Unknown')}")
+                                device_name = config.get('name') or config.get('device_name', 'Unknown')
+                                print(f"      - 设备名称: {device_name}")
                         else:
                             print(f"   ❌ {api_name} API返回错误: {data.get('error', 'Unknown')}")
                     else:
@@ -127,7 +128,7 @@ async def test_complete_pages():
             test_config = {
                 'host': '192.168.188.221',
                 'port': 5555,
-                'device_name': 'Test Device',
+                'name': 'Test Device',
                 'screenshot_path': '/tmp/screenshots/',
                 'screenshot_keep_count': 3,
                 'screenshot_interval': 3,

@@ -564,7 +564,7 @@
                         <div style="padding: 10px; background: #f5f5f5; border-radius: 5px; margin: 10px 0;">
                             <strong>ADB Host:</strong> ${data.data.host}<br>
                             <strong>ADB Port:</strong> ${data.data.port}<br>
-                            <strong>Device Name:</strong> ${data.data.device_name}<br>
+                            <strong>Device Name:</strong> ${data.data.name || data.data.device_name}<br>
                             <strong>CPU Threshold:</strong> ${data.data.cpu_threshold}%<br>
                             <strong>Termux Mode:</strong> ${data.data.termux_mode ? 'Enabled' : 'Disabled'}
                         </div>

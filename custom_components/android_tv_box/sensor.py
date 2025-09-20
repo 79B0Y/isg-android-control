@@ -1,13 +1,13 @@
 """Sensor platform for Android TV Box integration."""
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from datetime import timedelta
 
 from homeassistant.components.sensor import SensorEntity, SensorDeviceClass, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.const import PERCENTAGE, UnitOfTemperature
 
 from .helpers import get_adb_service, get_config
@@ -126,6 +126,8 @@ async def async_setup_entry(
 
     # Create coordinator
     coordinator = AndroidTVBoxSensorCoordinator(hass, adb_service, config)
+
+    await coordinator.async_config_entry_first_refresh()
     
     # Create sensor entities
     entities = [
@@ -165,7 +167,8 @@ class AndroidTVBoxBrightnessSensor(SensorEntity):
     @property
     def native_value(self) -> Optional[int]:
         """Return the brightness value."""
-        return self.coordinator.data.get("brightness")
+        data = self.coordinator.data or {}
+        return data.get("brightness")
 
     @property
     def available(self) -> bool:
@@ -208,7 +211,8 @@ class AndroidTVBoxWiFiSSIDSensor(SensorEntity):
     @property
     def native_value(self) -> Optional[str]:
         """Return the WiFi SSID."""
-        return self.coordinator.data.get("ssid")
+        data = self.coordinator.data or {}
+        return data.get("ssid")
 
     @property
     def available(self) -> bool:
@@ -251,7 +255,8 @@ class AndroidTVBoxIPAddressSensor(SensorEntity):
     @property
     def native_value(self) -> Optional[str]:
         """Return the IP address."""
-        return self.coordinator.data.get("ip_address")
+        data = self.coordinator.data or {}
+        return data.get("ip_address")
 
     @property
     def available(self) -> bool:
@@ -294,7 +299,8 @@ class AndroidTVBoxCurrentAppSensor(SensorEntity):
     @property
     def native_value(self) -> Optional[str]:
         """Return the current app."""
-        return self.coordinator.data.get("current_app")
+        data = self.coordinator.data or {}
+        return data.get("current_app")
 
     @property
     def available(self) -> bool:
@@ -340,7 +346,8 @@ class AndroidTVBoxCPUUsageSensor(SensorEntity):
     @property
     def native_value(self) -> Optional[float]:
         """Return the CPU usage."""
-        return self.coordinator.data.get("cpu_usage")
+        data = self.coordinator.data or {}
+        return data.get("cpu_usage")
 
     @property
     def available(self) -> bool:
@@ -386,7 +393,8 @@ class AndroidTVBoxMemoryUsageSensor(SensorEntity):
     @property
     def native_value(self) -> Optional[int]:
         """Return the memory usage."""
-        return self.coordinator.data.get("memory_used")
+        data = self.coordinator.data or {}
+        return data.get("memory_used")
 
     @property
     def available(self) -> bool:
@@ -429,8 +437,9 @@ class AndroidTVBoxHighCPUWarningSensor(SensorEntity):
     @property
     def native_value(self) -> str:
         """Return the high CPU warning status."""
-        if self.coordinator.data.get("high_cpu_warning", False):
-            count = self.coordinator.data.get("high_cpu_count", 0)
+        data = self.coordinator.data or {}
+        if data.get("high_cpu_warning", False):
+            count = data.get("high_cpu_count", 0)
             return f"High CPU detected for {count} consecutive readings"
         return "Normal"
 

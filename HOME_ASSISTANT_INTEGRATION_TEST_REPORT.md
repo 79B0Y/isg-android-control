@@ -143,7 +143,7 @@ Status: Connected and responsive
 android_tv_box:
   host: "192.168.188.221"     # ✅ 正确的设备IP
   port: 5555                  # ✅ ADB TCP端口
-  device_name: "Android TV Box"
+  name: "Android TV Box"
   screenshot_path: "/sdcard/isgbackup/screenshot/"  # ✅ 路径有效
   screenshot_keep_count: 3     # ✅ 清理机制工作
   screenshot_interval: 3       # ✅ 3秒间隔正常
@@ -151,6 +151,8 @@ android_tv_box:
   cpu_threshold: 50           # ✅ 阈值触发警告
   isg_monitoring: true        # ✅ iSG监控活跃
 ```
+
+> 说明：`device_name` 仍然作为兼容字段被接受，但推荐改用 `name` 以与最新配置向导保持一致。
 
 ## 性能表现
 

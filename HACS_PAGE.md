@@ -63,7 +63,7 @@ Access a beautiful web interface at `http://localhost:3003` for:
 android_tv_box:
   host: "127.0.0.1"
   port: 5555
-  device_name: "Android TV Box"
+  name: "Android TV Box"
   screenshot_path: "/sdcard/isgbackup/screenshot/"
   screenshot_keep_count: 3
   screenshot_interval: 3
@@ -73,6 +73,8 @@ android_tv_box:
   ubuntu_venv_path: "~/uiauto_env"
   adb_path: "/usr/bin/adb"
 ```
+
+> ℹ️ Legacy configs may still reference `device_name`; it is supported as an alias, but `name` is now preferred.
 
 ### Application Configuration
 ```yaml

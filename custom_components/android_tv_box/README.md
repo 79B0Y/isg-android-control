@@ -151,7 +151,7 @@ adb devices
    android_tv_box:
      host: "127.0.0.1"
      port: 5555
-     device_name: "Android TV Box"
+     name: "Android TV Box"
      screenshot_path: "/sdcard/isgbackup/screenshot/"
      screenshot_keep_count: 3
      screenshot_interval: 3
@@ -172,7 +172,8 @@ adb devices
 |--------|---------|-------------|
 | `host` | `127.0.0.1` | ADB host address |
 | `port` | `5555` | ADB port |
-| `device_name` | `Android TV Box` | Device name in Home Assistant |
+| `name` | `Android TV Box` | Device name in Home Assistant |
+| `device_name` | _(deprecated)_ | Legacy alias for `name`, still accepted |
 | `screenshot_path` | `/sdcard/isgbackup/screenshot/` | Screenshot storage path |
 | `screenshot_keep_count` | `3` | Number of screenshots to keep |
 | `screenshot_interval` | `3` | Screenshot interval in seconds |

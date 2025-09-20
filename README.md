@@ -99,7 +99,7 @@ The following Android devices are supported:
 android_tv_box:
   host: "127.0.0.1"
   port: 5555
-  device_name: "Android TV Box"
+  name: "Android TV Box"
   screenshot_path: "/sdcard/isgbackup/screenshot/"
   screenshot_keep_count: 3
   screenshot_interval: 3
@@ -109,6 +109,8 @@ android_tv_box:
   ubuntu_venv_path: "~/uiauto_env"
   adb_path: "/usr/bin/adb"
 ```
+
+> **Note:** Older configuration examples may use `device_name`. The integration still accepts this alias for backward compatibility, but new setups should prefer the standard Home Assistant `name` field.
 
 ### Application Configuration
 

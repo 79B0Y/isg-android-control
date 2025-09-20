@@ -49,13 +49,15 @@ Access a beautiful web interface at `http://localhost:3003` for:
 android_tv_box:
   host: "127.0.0.1"
   port: 5555
-  device_name: "Android TV Box"
+  name: "Android TV Box"
   apps:
     YouTube: com.google.android.youtube
     Netflix: com.netflix.mediaclient
     iSG: com.linknlink.app.device.isg
   isg_monitoring: true
 ```
+
+> 兼容性提示：旧版本配置中的 `device_name` 仍可使用，但建议改用标准的 `name` 字段。
 
 ## 📊 Supported Entities
 

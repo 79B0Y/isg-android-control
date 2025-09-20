@@ -34,24 +34,29 @@ class AndroidTVBoxConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
+            data: Dict[str, Any] = dict(user_input)
+            legacy_name = data.pop("device_name", None)
+            if not data.get("name"):
+                data["name"] = legacy_name or "Android TV Box"
+
             # Check for existing entries
-            await self.async_set_unique_id(f"{user_input['host']}:{user_input['port']}")
+            await self.async_set_unique_id(f"{data['host']}:{data['port']}")
             self._abort_if_unique_id_configured()
 
             # Test ADB connection
             try:
                 adb_service = ADBService(
-                    host=user_input["host"],
-                    port=user_input["port"],
-                    adb_path=user_input.get("adb_path", "/usr/bin/adb")
+                    host=data["host"],
+                    port=data["port"],
+                    adb_path=data.get("adb_path", "/usr/bin/adb")
                 )
 
                 connected = await adb_service.connect()
                 if connected:
                     await adb_service.disconnect()
                     return self.async_create_entry(
-                        title=user_input["name"],
-                        data=user_input,
+                        title=data["name"],
+                        data=data,
                     )
                 else:
                     errors["base"] = "cannot_connect"
