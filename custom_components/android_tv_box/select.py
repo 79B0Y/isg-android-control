@@ -79,8 +79,6 @@ async def async_setup_entry(
 
     # Create coordinator
     coordinator = AndroidTVBoxSelectCoordinator(hass, adb_service, config)
-    # Ensure first refresh completes before entity is created
-    await coordinator.async_config_entry_first_refresh()
     
     # Create select entity
     entity = AndroidTVBoxAppSelect(coordinator, config)

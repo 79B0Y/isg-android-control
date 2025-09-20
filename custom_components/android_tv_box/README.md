@@ -1,9 +1,5 @@
 # Android TV Box Integration for Home Assistant
 
-<p align="left">
-  <img src="./web/logo.jpg" alt="LinknLink" height="36" />
-</p>
-
 This integration allows you to control your Android TV Box through Home Assistant using ADB (Android Debug Bridge) commands. It provides comprehensive control over media playback, system settings, and device monitoring.
 
 ## Installation

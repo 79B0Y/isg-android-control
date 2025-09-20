@@ -1,8 +1,7 @@
 {
   "name": "Android TV Box",
   "content_in_root": false,
-  "icon": "assets/icon.png",
-  "domains": ["android_tv_box"],
+  "filename": "android_tv_box",
   "country": ["CN", "US", "GB", "DE", "FR", "ES", "IT", "NL", "AU", "CA"],
   "homeassistant": "2023.1.0",
   "render_readme": true

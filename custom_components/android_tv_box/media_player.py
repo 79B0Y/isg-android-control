@@ -111,8 +111,6 @@ async def async_setup_entry(
 
     # Create coordinator
     coordinator = AndroidTVBoxCoordinator(hass, adb_service)
-    # Ensure first refresh completes before entity is created
-    await coordinator.async_config_entry_first_refresh()
     
     # Create media player entity
     entity = AndroidTVBoxMediaPlayer(coordinator, config)
@@ -157,12 +155,11 @@ class AndroidTVBoxMediaPlayer(MediaPlayerEntity):
     @property
     def state(self) -> MediaPlayerState:
         """Return the state of the device."""
-        data = self.coordinator.data or {}
-        if not data.get("is_on", False):
+        if not self.coordinator.data.get("is_on", False):
             return MediaPlayerState.OFF
         
         # Use the media state from coordinator data
-        media_state = data.get("media_state", "unknown")
+        media_state = self.coordinator.data.get("media_state", "unknown")
         if media_state == "off":
             return MediaPlayerState.OFF
         elif media_state == "playing":
@@ -177,20 +174,17 @@ class AndroidTVBoxMediaPlayer(MediaPlayerEntity):
     @property
     def volume_level(self) -> Optional[float]:
         """Volume level of the media player (0..1)."""
-        data = self.coordinator.data or {}
-        return data.get("volume_level")
+        return self.coordinator.data.get("volume_level")
 
     @property
     def is_volume_muted(self) -> bool:
         """Boolean if volume is currently muted."""
-        data = self.coordinator.data or {}
-        return data.get("is_volume_muted", False)
+        return self.coordinator.data.get("is_volume_muted", False)
 
     @property
     def media_title(self) -> Optional[str]:
         """Title of current playing media."""
-        data = self.coordinator.data or {}
-        current_app = data.get("current_app")
+        current_app = self.coordinator.data.get("current_app")
         return current_app if current_app else "Android TV Box"
 
     @property
@@ -201,8 +195,7 @@ class AndroidTVBoxMediaPlayer(MediaPlayerEntity):
     @property
     def media_content_id(self) -> Optional[str]:
         """Content ID of current playing media."""
-        data = self.coordinator.data or {}
-        return data.get("current_app")
+        return self.coordinator.data.get("current_app")
 
     async def async_turn_on(self) -> None:
         """Turn the media player on."""
@@ -249,8 +242,7 @@ class AndroidTVBoxMediaPlayer(MediaPlayerEntity):
         """Mute the volume."""
         if mute:
             # Store current volume level before muting
-            data = self.coordinator.data or {}
-            current_volume = data.get("volume_level", 0.5)
+            current_volume = self.coordinator.data.get("volume_level", 0.5)
             if current_volume > 0:
                 # Store volume level for unmuting
                 self._previous_volume = current_volume

@@ -4,7 +4,6 @@ import logging
 import subprocess
 import time
 from typing import Optional, Dict, Any, List
-import re
 from datetime import datetime, timedelta
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,29 +26,6 @@ class ADBService:
         self._connected = False
         self._last_command_time = 0
         self._command_delay = 0.1  # Minimum delay between commands
-        self._cpu_cores: Optional[int] = None
-
-    @staticmethod
-    def _strip_ansi(text: str) -> str:
-        """Remove ANSI escape sequences from text (e.g., from colored top/ps output)."""
-        try:
-            # Remove common ANSI sequences (CSI, OSC) and any stray ESC bytes
-            csi_re = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
-            osc_re = re.compile(r"\x1B\][^\x07]*\x07")
-            text = csi_re.sub("", text)
-            text = osc_re.sub("", text)
-            text = text.replace("\x1b", "")
-            return text
-        except Exception:
-            return text
-
-    @staticmethod
-    def _sanitize_pid(pid: str) -> str:
-        """Keep only digits from a PID string, removing any stray characters."""
-        try:
-            return re.sub(r"\D", "", pid)
-        except Exception:
-            return pid
 
     async def connect(self) -> bool:
         """Connect to ADB device."""
@@ -98,9 +74,7 @@ class ADBService:
         self._last_command_time = time.time()
 
         try:
-            # Route through sh -c so we can use pipes, grep, and logical operators (||, &&)
-            # Pass the command string as-is (no splitting) to preserve quoting.
-            cmd = ["-s", self.device_address, "shell", "sh", "-c", command]
+            cmd = ["-s", self.device_address, "shell"] + command.split()
             result = await self._run_command(cmd, timeout=timeout)
             return result.strip()
         except subprocess.TimeoutExpired:
@@ -134,25 +108,6 @@ class ADBService:
         except asyncio.TimeoutError:
             process.kill()
             raise subprocess.TimeoutExpired(full_cmd, timeout)
-
-    async def pull_file(self, remote_path: str, local_path: str, timeout: int = 20) -> bool:
-        """Pull a file from the device to the local filesystem.
-
-        Returns True on success and when the local file exists after pull.
-        """
-        if not self._connected:
-            if not await self.connect():
-                raise ADBConnectionError("Device not connected")
-        try:
-            # Ensure local directory exists
-            import os
-            os.makedirs(os.path.dirname(local_path) or ".", exist_ok=True)
-            cmd = ["-s", self.device_address, "pull", remote_path, local_path]
-            await self._run_command(cmd, timeout=timeout)
-            return os.path.exists(local_path)
-        except Exception as e:
-            _LOGGER.error(f"ADB pull failed: {e}")
-            return False
 
     # Media Player Commands
     async def media_play(self) -> bool:
@@ -675,64 +630,25 @@ class ADBService:
                 "highest_cpu_service": None
             }
             
-            # Ensure we know CPU core count for normalization
-            try:
-                if not self._cpu_cores:
-                    cores_str = await self.shell_command("grep -c ^processor /proc/cpuinfo 2>/dev/null || echo 1")
-                    cores = int(cores_str.strip().splitlines()[0] or 1)
-                    if cores < 1 or cores > 64:
-                        cores = 1
-                    self._cpu_cores = cores
-            except Exception:
-                self._cpu_cores = self._cpu_cores or 1
-
             # Get top output
             result = await self.shell_command("top -d 0.5 -n 1", timeout=5)
             lines = result.split('\n')
             
-            # Parse CPU usage - handle multiple Android top formats
-            # Example A: "400%cpu  98%user   0%nice 207%sys  79%idle"
-            # Example B: "CPU usage from ...: 7% user + 5% kernel + 0% iowait + 88% idle"
+            # Parse CPU usage - Android device format: "400%cpu  98%user   0%nice 207%sys  79%idle"
             for line in lines:
-                low = line.lower()
-                if ("%cpu" in low and "%user" in low) or ("cpu usage" in low and "%" in low):
-                    # Use decimal-capable regexes
-                    user_match = re.search(r'(\d+(?:\.\d+)?)%\s*user', low)
-                    sys_match = re.search(r'(\d+(?:\.\d+)?)%\s*(?:sys|kernel)', low)
-                    nice_match = re.search(r'(\d+(?:\.\d+)?)%\s*nice', low)
-                    irq_match = re.search(r'(\d+(?:\.\d+)?)%\s*(?:irq|hi|si)', low)
-                    iow_match = re.search(r'(\d+(?:\.\d+)?)%\s*iow', low)
-                    idle_match = re.search(r'(\d+(?:\.\d+)?)%\s*idle', low)
-                    total_header = re.search(r'(\d+(?:\.\d+)?)%\s*cpu', low)
-
-                    cores = self._cpu_cores or 1
-
-                    usage = None
-                    # Prefer computing from total header minus idle when available
-                    if total_header and idle_match:
-                        try:
-                            total_pct = float(total_header.group(1))
-                            idle_pct = float(idle_match.group(1))
-                            usage_all = max(total_pct - idle_pct, 0.0)
-                            usage = usage_all / max(cores, 1)
-                        except Exception:
-                            usage = None
-
-                    if usage is None:
-                        # Sum known busy categories and normalize by cores
-                        busy = 0.0
-                        for m in (user_match, sys_match, nice_match, irq_match, iow_match):
-                            if m:
-                                try:
-                                    busy += float(m.group(1))
-                                except Exception:
-                                    pass
-                        if busy > 0:
-                            usage = busy / max(cores, 1)
-
-                    if usage is not None:
-                        # Clamp to [0, 100] to avoid >100% due to quirks or rounding
-                        performance["cpu_usage_percent"] = max(0.0, min(100.0, round(usage, 1)))
+                if "%cpu" in line.lower() and "%user" in line:
+                    import re
+                    # Extract user and sys percentages
+                    user_match = re.search(r'(\d+)%user', line)
+                    sys_match = re.search(r'(\d+)%sys', line)
+                    
+                    if user_match and sys_match:
+                        user_cpu = float(user_match.group(1))
+                        sys_cpu = float(sys_match.group(1))
+                        # This device shows cumulative values for all cores, estimate total cores
+                        total_cores = 4  # Typical for Android devices
+                        total_cpu = (user_cpu + sys_cpu) / total_cores
+                        performance["cpu_usage_percent"] = round(total_cpu, 1)
                     break
             
             # Parse Memory usage - Android format: "Mem:  4006164K total,  3660916K used,   345248K free"
@@ -764,15 +680,14 @@ class ADBService:
                     continue
                 
                 if process_started and line.strip():
-                    # Clean ANSI escape sequences thoroughly
-                    clean_line = self._strip_ansi(line)
+                    import re
+                    # Clean ANSI escape sequences
+                    clean_line = re.sub(r'\[[\d;]*[mK]', '', line)
                     parts = clean_line.split()
                     
                     if len(parts) >= 11:
                         try:
-                            pid = self._sanitize_pid(parts[0])
-                            if not pid:
-                                continue
+                            pid = parts[0]
                             cpu_str = parts[8]  # %CPU column (after S column)
                             command = parts[-1] if len(parts) > 10 else "unknown"
                             
@@ -819,12 +734,8 @@ class ADBService:
     async def _get_service_name_by_pid(self, pid: str) -> Optional[str]:
         """Get service name by process ID."""
         try:
-            pid = self._sanitize_pid(str(pid))
-            if not pid:
-                return None
             # Try to get process info from /proc/PID/cmdline
-            # Suppress transient failures when a process exits between sampling and read
-            result = await self.shell_command(f"cat /proc/{pid}/cmdline || true")
+            result = await self.shell_command(f"cat /proc/{pid}/cmdline")
             if result and result.strip():
                 # cmdline contains null-separated command line arguments
                 cmdline = result.replace('\x00', ' ').strip()
@@ -837,12 +748,12 @@ class ADBService:
                     return service_name
             
             # Fallback: try ps command
-            result = await self.shell_command(f"ps -p {pid} -o comm= || true")
+            result = await self.shell_command(f"ps -p {pid} -o comm=")
             if result and result.strip():
                 return result.strip()
             
             # Another fallback: try ps aux
-            result = await self.shell_command(f"ps aux | grep {pid} | grep -v grep | head -1 || true")
+            result = await self.shell_command(f"ps aux | grep {pid} | grep -v grep | head -1")
             if result and result.strip():
                 parts = result.split()
                 if len(parts) >= 11:
@@ -884,10 +795,8 @@ class ADBService:
             if result.strip():
                 parts = result.strip().split()
                 if len(parts) >= 2:
-                    pid_str = self._sanitize_pid(parts[1])
-                    pid_val = int(pid_str) if pid_str.isdigit() else None
                     return {
-                        "pid": pid_val,
+                        "pid": int(parts[1]),
                         "running": True,
                         "process_info": result.strip()
                     }
@@ -940,9 +849,7 @@ class ADBService:
                     if line.strip():
                         parts = line.split()
                         if len(parts) >= 2:
-                            pid_clean = self._sanitize_pid(parts[1])
-                            if pid_clean:
-                                pids.append(pid_clean)
+                            pids.append(parts[1])
                 
                 for pid in pids:
                     try:

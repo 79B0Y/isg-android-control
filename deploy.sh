@@ -70,23 +70,9 @@ fi
 
 # Copy the integration
 print_status "Copying Android TV Box integration..."
-# Ensure backups directory exists (to avoid HA scanning backups as integrations)
-mkdir -p "$CUSTOM_COMPONENTS_DIR/_backups"
-
-# Move any legacy dot-named backups out of the scan path
-shopt -s nullglob
-for legacy in "$CUSTOM_COMPONENTS_DIR"/android_tv_box.backup.*; do
-    if [ -d "$legacy" ]; then
-        print_warning "Found legacy backup: $(basename "$legacy"). Moving to _backups/."
-        mv "$legacy" "$CUSTOM_COMPONENTS_DIR/_backups/"
-    fi
-done
-shopt -u nullglob
-
 if [ -d "$CUSTOM_COMPONENTS_DIR/android_tv_box" ]; then
-    print_warning "Integration already exists. Backing up to _backups/."
-    TS=$(date +%Y%m%d_%H%M%S)
-    mv "$CUSTOM_COMPONENTS_DIR/android_tv_box" "$CUSTOM_COMPONENTS_DIR/_backups/android_tv_box_$TS"
+    print_warning "Integration already exists. Backing up..."
+    mv "$CUSTOM_COMPONENTS_DIR/android_tv_box" "$CUSTOM_COMPONENTS_DIR/android_tv_box.backup.$(date +%Y%m%d_%H%M%S)"
 fi
 
 cp -r "custom_components/android_tv_box" "$CUSTOM_COMPONENTS_DIR/"
