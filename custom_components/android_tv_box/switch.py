@@ -83,6 +83,8 @@ async def async_setup_entry(
 
     # Create coordinator
     coordinator = AndroidTVBoxSwitchCoordinator(hass, adb_service)
+    # Ensure first refresh completes before entities read data
+    await coordinator.async_config_entry_first_refresh()
     
     # Create switch entities
     entities = [
@@ -115,7 +117,8 @@ class AndroidTVBoxPowerSwitch(SwitchEntity):
     @property
     def is_on(self) -> bool:
         """Return true if the switch is on."""
-        return self.coordinator.data.get("power_on", False)
+        data = self.coordinator.data or {}
+        return data.get("power_on", False)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""
@@ -168,7 +171,8 @@ class AndroidTVBoxWiFiSwitch(SwitchEntity):
     @property
     def is_on(self) -> bool:
         """Return true if the switch is on."""
-        return self.coordinator.data.get("wifi_on", False)
+        data = self.coordinator.data or {}
+        return data.get("wifi_on", False)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the switch on."""
@@ -221,7 +225,8 @@ class AndroidTVBoxADBSwitch(SwitchEntity):
     @property
     def is_on(self) -> bool:
         """Return true if ADB is connected."""
-        return self.coordinator.data.get("adb_connected", False)
+        data = self.coordinator.data or {}
+        return data.get("adb_connected", False)
 
     @property
     def icon(self) -> str:

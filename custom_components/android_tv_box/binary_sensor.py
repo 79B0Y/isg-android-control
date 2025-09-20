@@ -107,6 +107,8 @@ async def async_setup_entry(
 
     # Create coordinator
     coordinator = AndroidTVBoxBinarySensorCoordinator(hass, adb_service, config)
+    # Ensure first refresh completes before entities are created
+    await coordinator.async_config_entry_first_refresh()
     
     # Create binary sensor entities
     entities = [
@@ -143,7 +145,8 @@ class AndroidTVBoxConnectionSensor(BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         """Return true if ADB is connected."""
-        return self.coordinator.data.get("adb_connected", False)
+        data = self.coordinator.data or {}
+        return data.get("adb_connected", False)
 
     async def async_added_to_hass(self) -> None:
         """When entity is added to hass."""
@@ -187,14 +190,13 @@ class AndroidTVBoxHighCPUWarningSensor(BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         """Return true if CPU usage is high."""
-        return self.coordinator.data.get("high_cpu_warning", False)
+        data = self.coordinator.data or {}
+        return data.get("high_cpu_warning", False)
 
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
         """Return extra state attributes."""
-        return {
-            "cpu_threshold": self.config.get("cpu_threshold", 50),
-        }
+        return {"cpu_threshold": self.config.get("cpu_threshold", 50)}
 
     async def async_added_to_hass(self) -> None:
         """When entity is added to hass."""
@@ -239,13 +241,15 @@ class AndroidTVBoxISGRunningSensor(BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         """Return true if iSG is running."""
-        return self.coordinator.data.get("isg_running", False)
+        data = self.coordinator.data or {}
+        return data.get("isg_running", False)
 
     @property
     def extra_state_attributes(self) -> Dict[str, Any]:
         """Return extra state attributes."""
+        data = self.coordinator.data or {}
         return {
-            "wake_attempted": self.coordinator.data.get("isg_wake_attempted", False),
+            "wake_attempted": data.get("isg_wake_attempted", False),
             "monitoring_enabled": self.config.get("isg_monitoring", True),
             "check_interval": self.config.get("isg_check_interval", 30),
         }

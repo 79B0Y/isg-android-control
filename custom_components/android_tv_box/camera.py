@@ -140,11 +140,10 @@ class AndroidTVBoxCameraCoordinator(DataUpdateCoordinator):
             # Pull the file from device to local temp location
             temp_file = f"{temp_dir}/screenshot_{datetime.now().timestamp()}.png"
             
-            # Use adb pull to get the file
-            cmd = ["pull", latest_file, temp_file]
-            result = await self.adb_service._run_command(cmd)
+            # Use adb pull to get the file (targeting our device)
+            ok = await self.adb_service.pull_file(latest_file, temp_file)
             
-            if os.path.exists(temp_file):
+            if ok and os.path.exists(temp_file):
                 try:
                     with open(temp_file, 'rb') as f:
                         data = f.read()
@@ -183,6 +182,8 @@ async def async_setup_entry(
 
     # Create coordinator
     coordinator = AndroidTVBoxCameraCoordinator(hass, adb_service, config)
+    # Ensure first refresh completes before entity is created
+    await coordinator.async_config_entry_first_refresh()
     
     # Create camera entity
     entity = AndroidTVBoxCamera(coordinator, config)
