@@ -74,7 +74,7 @@ class ADBService:
         self._last_command_time = time.time()
 
         try:
-            cmd = ["-s", self.device_address, "shell"] + command.split()
+            cmd = ["-s", self.device_address, "shell", "sh", "-c", command]
             result = await self._run_command(cmd, timeout=timeout)
             return result.strip()
         except subprocess.TimeoutExpired:
@@ -682,7 +682,7 @@ class ADBService:
                 if process_started and line.strip():
                     import re
                     # Clean ANSI escape sequences
-                    clean_line = re.sub(r'\[[\d;]*[mK]', '', line)
+                    clean_line = re.sub(r'\x1B\[[0-9;]*[A-Za-z]', '', line)
                     parts = clean_line.split()
                     
                     if len(parts) >= 11:
